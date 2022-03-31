@@ -25,6 +25,7 @@ class Php81Task extends BuildTask
             'next'
         ],
         'IteratorAggregate' => [
+            // use lowercase method names
             'getiterator'
         ],
         'Countable' => [
@@ -40,9 +41,47 @@ class Php81Task extends BuildTask
 
     private const FUNC_CALL_CONFIG = [
         // [$argPos => 'cast|ternary'] - where $argPos is 1 indexed i.e. first arg = 1, not 0'
-        'preg_match' => [2 => 'cast'],
+        'explode' => [2 => 'cast'],
+        'html_entity_decode' => [1 => 'cast'],
+        'htmlentities' => [1 => 'cast'],
+        'htmlspecialchars' => [1 => 'cast'],
+        'implode' => [2 => 'ternary-array'],
+        'lcfirst' => [1 => 'cast'],
+        'ltrim' => [1 => 'cast'],
+        'nl2br' => [1 => 'cast'],
+        'number_format' => [1 => 'cast-float'],
+        'parse_str' => [1 => 'cast'],
+        'rtrim' => [1 => 'cast'],
+        'str_contains' => [1 => 'cast', 2 => 'cast'],
+        'str_pad' => [1 => 'cast'],
         'str_replace' => [3 => 'ternary'],
+        'str_split' => [1 => 'cast'],
+        'strcasecmp' => [1 => 'cast', 2 => 'cast'],
+        'strcmp' => [1 => 'cast', 2 => 'cast'],
+        'strip_tags' => [1 => 'cast'],
+        'stripcslashes' => [1 => 'cast'],
+        'stripos' => [1 => 'cast', 2 => 'cast'],
+        'stripslashes' => [1 => 'cast'],
+        'stristr' => [1 => 'cast', 2 => 'cast'],
+        'strlen' => [1 => 'cast'],
+        'strpos' => [1 => 'cast', 2 => 'cast'],
+        'strrchr' => [1 => 'cast', 2 => 'cast'],
+        'strripos' => [1 => 'cast', 2 => 'cast'],
+        'strrpos' => [1 => 'cast', 2 => 'cast'],
+        'strstr' => [1 => 'cast', 2 => 'cast'],
+        'strtok' => [1 => 'cast', 2 => 'cast'],
+        'strtolower' => [1 => 'cast'],
         'strtoupper' => [1 => 'cast'],
+        'strtr' => [1 => 'cast', 2 => 'cast', 3 => 'cast'],
+        'substr' => [1 => 'cast'],
+        'trim' => [1 => 'cast'],
+        'ucfirst' => [1 => 'cast'],
+        'ucwords' => [1 => 'cast'],
+        'preg_match' => [2 => 'cast'],
+        'preg_quote' => [1 => 'cast'],
+        'preg_replace' => [3 => 'ternary'],
+        'preg_replace_callback' => [3 => 'ternary'],
+        'preg_split' => [2 => 'cast'],
     ];
 
     public function run($request)
@@ -241,16 +280,26 @@ class Php81Task extends BuildTask
                         }
                         /** @var Variable $variable */
                         $variable = $arg->value;
+                        $a = explode('-', $what);
+                        $what = $a[0];
+                        $type = $a[1] ?? 'string';
                         if ($what == 'cast') {
                             $code = implode('', [
                                 substr($code, 0, $variable->getStartFilePos()),
-                                '(string) ',
+                                "($type) ",
                                 substr($code, $variable->getStartFilePos()),
                             ]);
                         } elseif ($what == 'ternary') {
+                            $a = [
+                                'string' => "''",
+                                'int' => '0',
+                                'float' => '0.0',
+                                'array' => '[]'
+                            ];
+                            $v = $a[$type];
                             $code = implode('', [
                                 substr($code, 0, $variable->getEndFilePos() + 1),
-                                " ?: ''",
+                                " ?: $v",
                                 substr($code, $variable->getEndFilePos() + 1),
                             ]);
                         }
