@@ -6,7 +6,6 @@ use PhpParser\Node\Arg;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\Variable;
-use PhpParser\NodeDumper;
 use PhpParser\ParserFactory;
 use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\ClassMethod;
@@ -34,9 +33,9 @@ class Php81Task extends BuildTask
         ],
         'ArrayAccess' => [
             'offsetexists',
-            'offsetgets',
+            'offsetget',
             'offsetset',
-            'offsetoffset',
+            'offsetunset',
         ],
     ];
 
@@ -83,6 +82,21 @@ class Php81Task extends BuildTask
         'preg_replace' => [3 => 'ternary'],
         'preg_replace_callback' => [3 => 'ternary'],
         'preg_split' => [2 => 'cast'],
+        // TODO https://www.php.net/manual/en/function.basename.php <<<<
+        'basename' => [1 => 'cast'],
+        '' => [1 => 'cast'], // etc
+        '' => [1 => 'cast'],
+        '' => [1 => 'cast'],
+        '' => [1 => 'cast'],
+        '' => [1 => 'cast'],
+        '' => [1 => 'cast'],
+        '' => [1 => 'cast'],
+        '' => [1 => 'cast'],
+        '' => [1 => 'cast'],
+        '' => [1 => 'cast'],
+        '' => [1 => 'cast'],
+        '' => [1 => 'cast'],
+        // TODO: if (strpos($arg, '#') !== false) { not detected -- need to handle inside if statements
     ];
 
     public function run($request)
@@ -220,7 +234,11 @@ class Php81Task extends BuildTask
         $fqcn = implode('\\', $namespace->name->parts ?? []) . '\\' . $class->name->name;
         $fqcn = ltrim($fqcn, '\\');
         foreach (self::ATTRIBUTES_CONFIG as $interface => $methods) {
-            $implements = @class_implements($fqcn);
+            try {
+                $implements = @class_implements($fqcn);
+            } catch (\Error|\Exception $e) {
+                continue;
+            }
             if ($implements === false) {
                 continue;
             }
