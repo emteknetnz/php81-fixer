@@ -17,7 +17,9 @@ class Php81Task extends BuildTask
 {
     public function run($request)
     {
-        $this->test();
+        $code = $this->getCode();
+        $code = $this->rewriteCode($code);
+        echo "$code\n";
     }
 
     private function getCode(): string
@@ -37,7 +39,7 @@ class Php81Task extends BuildTask
 
             public function myMethod($foo)
             {
-                $str = 'xyz';
+                $xstr = 'xyz';
                 $a = str_replace('a', 'b', 'c');
                 $b = str_replace('x', 'y', $xstr);
                 preg_match('/g/', $xstr);
@@ -66,6 +68,7 @@ class Php81Task extends BuildTask
             echo "Parse error: {$error->getMessage()}\n";
             die;
         }
+        // print_r($ast);
         return $ast;
     }
 
@@ -73,6 +76,11 @@ class Php81Task extends BuildTask
     {
         $dumper = new NodeDumper;
         echo $dumper->dump($ast) . "\n";
+    }
+
+    private function getClasses(array $ast)
+    {
+        return array_filter($ast, fn($v) => $v instanceof Class_);
     }
 
     private function getMethods(Class_ $class): array
@@ -102,20 +110,23 @@ class Php81Task extends BuildTask
 
     private function getFuncCallConfig(string $name)
     {
+        // [$argPos => 'cast|ternary'] - where $argPos is 1 indexed i.e. first arg = 1, not 0
         $a = [
             'preg_match' => [2 => 'cast'],
-            'str_replace' => [3 => 'ternary'] // as in string cast the 3rd arg
+            'str_replace' => [3 => 'ternary']
         ];
         return $a[$name] ?? [];
     }
 
-    private function test()
+    private function rewriteCode(string $code): string
     {
-        $code = $this->getCode();
         $ast = $this->getAst($code);
-        $classes = array_filter($ast, fn($v) => $v instanceof Class_);
+        $classes = $this->getClasses($ast);
+        $classes = array_reverse($classes);
         foreach ($classes as $class) {
-            foreach ($this->getMethods($class) as $method) {
+            $methods = $this->getMethods($class);
+            $methods = array_reverse($methods);
+            foreach ($methods as $method) {
                 $funcCalls = $this->getFuncCalls($method);
                 $funcCalls = array_reverse($funcCalls);
                 foreach ($funcCalls as $funcCall) {
@@ -141,7 +152,6 @@ class Php81Task extends BuildTask
                                 substr($code, $variable->getStartFilePos()),
                             ]);
                         } elseif ($what == 'ternary') {
-                            echo $variable->getEndFilePos() . "\n";
                             $code = implode('', [
                                 substr($code, 0, $variable->getEndFilePos() + 1),
                                 " ?: ''",
@@ -152,7 +162,6 @@ class Php81Task extends BuildTask
                 }
             }
         }
-        echo $code;
-        // print_r($ast);
+        return $code;
     }
 }
