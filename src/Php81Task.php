@@ -11,11 +11,12 @@ use PhpParser\ParserFactory;
 use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\Expression;
+use PhpParser\Node\Stmt\Namespace_;
 use SilverStripe\Dev\BuildTask;
 
 class Php81Task extends BuildTask
 {
-    private const ATTRIBUTE_CONFIG = [
+    private const ATTRIBUTES_CONFIG = [
         // do not prefix interfaces with backslash, class_implements() always returns without them
         'Iterator' => [
             'current',
@@ -119,10 +120,14 @@ class Php81Task extends BuildTask
             if (is_dir($path)) {
                 continue;
             }
-            $code = file_get_contents($path);
-            $code = $this->rewriteCode($code);
-            echo "$code\n";
-            die;
+            $originalCode = file_get_contents($path);
+            $newCode = $this->rewriteCode($originalCode);
+            if ($originalCode != $newCode) {
+                file_put_contents($path, $newCode);
+                echo "Updated code in $path\n";
+            } else {
+                // echo "No changes made in $path\n";
+            }
         }
     }
 
@@ -155,15 +160,15 @@ class Php81Task extends BuildTask
         return $ast;
     }
 
-    private function dump(array $ast)
+    private function getNamespace(array $ast): ?Namespace_
     {
-        $dumper = new NodeDumper;
-        echo $dumper->dump($ast) . "\n";
+        return ($ast[0] ?? null) instanceof Namespace_ ? $ast[0] : null;
     }
 
-    private function getClasses(array $ast)
+    private function getClasses(array $ast): array
     {
-        return array_filter($ast, fn($v) => $v instanceof Class_);
+        $a = ($ast[0] ?? null) instanceof Namespace_ ? $ast[0]->stmts : $ast;
+        return array_filter($a, fn($v) => $v instanceof Class_);
     }
 
     private function getMethods(Class_ $class): array
@@ -177,6 +182,9 @@ class Php81Task extends BuildTask
             $funcCalls[] = $expr;
         }
         if (property_exists($expr, 'expr')) {
+            if (is_null($expr->expr)) {
+                return;
+            }
             $this->recursiveAddFuncCalls($expr->expr, $funcCalls);
         }
     }
@@ -185,7 +193,10 @@ class Php81Task extends BuildTask
     {
         $funcCalls = [];
         /** @var Expression $expression */
-        foreach ($method->stmts as $expression) {
+        foreach ($method->stmts ?? [] as $expression) {
+            if (is_null($expression->expr ?? null)) {
+                continue;
+            }
             $this->recursiveAddFuncCalls($expression->expr, $funcCalls);
         }
         return $funcCalls;
@@ -203,12 +214,17 @@ class Php81Task extends BuildTask
         return $code;
     }
 
-    private function getAttributesConfig(Class_ $class): array
+    private function getAttributesConfig(?Namespace_ $namespace, Class_ $class): array
     {
         $ret = [];
-        foreach (self::ATTRIBUTE_CONFIG as $interface => $methods) {
-            $name = $class->name->name;
-            if (!in_array($interface, class_implements($name))) {
+        $fqcn = implode('\\', $namespace->name->parts ?? []) . '\\' . $class->name->name;
+        $fqcn = ltrim($fqcn, '\\');
+        foreach (self::ATTRIBUTES_CONFIG as $interface => $methods) {
+            $implements = @class_implements($fqcn);
+            if ($implements === false) {
+                continue;
+            }
+            if (!in_array($interface, $implements)) {
                 continue;
             }
             $ret = array_merge($ret, $methods);
@@ -219,10 +235,11 @@ class Php81Task extends BuildTask
     private function addMethodAttributes(string $code): string
     {
         $ast = $this->getAst($code);
+        $namespace = $this->getNamespace($ast);
         $classes = $this->getClasses($ast);
         $classes = array_reverse($classes);
         foreach ($classes as $class) {
-            $config = $this->getAttributesConfig($class);
+            $config = $this->getAttributesConfig($namespace, $class);
             $methods = $this->getMethods($class);
             $methods = array_reverse($methods);
             foreach ($methods as $method) {
@@ -265,7 +282,7 @@ class Php81Task extends BuildTask
                 $funcCalls = $this->getFuncCalls($method);
                 $funcCalls = array_reverse($funcCalls);
                 foreach ($funcCalls as $funcCall) {
-                    $name = $funcCall->name->parts[0];
+                    $name = $funcCall->name->parts[0] ?? '';
                     $config = $this->getFuncCallConfig($name);
                     if (empty($config)) {
                         continue;
@@ -274,8 +291,8 @@ class Php81Task extends BuildTask
                     foreach ($config as $argNum => $what) {
                         $a = $argNum - 1;
                         /** @var Arg $arg */
-                        $arg = $funcCall->args[$a];
-                        if (!($arg->value instanceof Variable)) {
+                        $arg = $funcCall->args[$a] ?? null;
+                        if (!($arg->value ?? null instanceof Variable)) {
                             continue;
                         }
                         /** @var Variable $variable */
