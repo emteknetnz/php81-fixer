@@ -15,37 +15,81 @@ use SilverStripe\Dev\BuildTask;
 
 class Php81Task extends BuildTask
 {
+    private const ATTRIBUTE_CONFIG = [
+        // do not prefix interfaces with backslash, class_implements() always returns without them
+        'Iterator' => [
+            'current',
+            'key',
+            'valid',
+            'rewind',
+            'next'
+        ],
+        'IteratorAggregate' => [
+            'getiterator'
+        ],
+        'Countable' => [
+            'count'
+        ],
+        'ArrayAccess' => [
+            'offsetexists',
+            'offsetgets',
+            'offsetset',
+            'offsetoffset',
+        ],
+    ];
+
+    private const FUNC_CALL_CONFIG = [
+        // [$argPos => 'cast|ternary'] - where $argPos is 1 indexed i.e. first arg = 1, not 0'
+        'preg_match' => [2 => 'cast'],
+        'str_replace' => [3 => 'ternary'],
+        'strtoupper' => [1 => 'cast'],
+    ];
+
     public function run($request)
     {
-        $code = $this->getCode();
-        $code = $this->rewriteCode($code);
-        echo "$code\n";
-    }
-
-    private function getCode(): string
-    {
-        return <<<'CODE'
-        <?php
-
-        class MyClass
-        {
-            public function secondMethod($foo)
-            {
-                $str = 'xyz';
-                $a = str_replace('a', 'b', 'c');
-                $b = str_replace('x', 'y', $str);
-                preg_match('/g/', $str);
+        $vendorDirs = [
+            BASE_PATH . '/vendor/dnadesign',
+            BASE_PATH . '/vendor/silverstripe',
+            BASE_PATH . '/vendor/symbiote',
+            BASE_PATH . '/vendor/bringyourownideas',
+        ];
+        foreach ($vendorDirs as $vendorDir) {
+            if (!file_exists($vendorDir)) {
+                continue;
             }
-
-            public function myMethod($foo)
-            {
-                $xstr = 'xyz';
-                $a = str_replace('a', 'b', 'c');
-                $b = str_replace('x', 'y', $xstr);
-                preg_match('/g/', $xstr);
+            foreach (scandir($vendorDir) as $subdir) {
+                if (in_array($subdir, ['.', '..'])) {
+                    continue;
+                }
+                $dir = "$vendorDir/$subdir";
+                foreach (['src', 'code', 'tests'] as $d) {
+                    $subdir = "$dir/$d";
+                    if (file_exists($subdir)) {
+                        $this->update($subdir);
+                    }
+                }
             }
         }
-        CODE;
+    }
+
+    public function update(string $dir)
+    {
+        $paths = explode("\n", shell_exec("find $dir | grep .php"));
+        $paths = array_filter($paths);
+        foreach ($paths as $path) {
+            if (is_dir($path)) {
+                continue;
+            }
+            $code = file_get_contents($path);
+            $code = $this->rewriteCode($code);
+            echo "$code\n";
+            die;
+        }
+    }
+
+    private function getSampleCode(): string
+    {
+        return file_get_contents(__DIR__ . '/MyClass.php');
     }
 
     private function getAst(string $code): array
@@ -110,15 +154,67 @@ class Php81Task extends BuildTask
 
     private function getFuncCallConfig(string $name)
     {
-        // [$argPos => 'cast|ternary'] - where $argPos is 1 indexed i.e. first arg = 1, not 0
-        $a = [
-            'preg_match' => [2 => 'cast'],
-            'str_replace' => [3 => 'ternary']
-        ];
-        return $a[$name] ?? [];
+        return self::FUNC_CALL_CONFIG[$name] ?? [];
     }
 
     private function rewriteCode(string $code): string
+    {
+        $code = $this->rewriteArguments($code);
+        $code = $this->addMethodAttributes($code);
+        return $code;
+    }
+
+    private function getAttributesConfig(Class_ $class): array
+    {
+        $ret = [];
+        foreach (self::ATTRIBUTE_CONFIG as $interface => $methods) {
+            $name = $class->name->name;
+            if (!in_array($interface, class_implements($name))) {
+                continue;
+            }
+            $ret = array_merge($ret, $methods);
+        }
+        return $ret;
+    }
+
+    private function addMethodAttributes(string $code): string
+    {
+        $ast = $this->getAst($code);
+        $classes = $this->getClasses($ast);
+        $classes = array_reverse($classes);
+        foreach ($classes as $class) {
+            $config = $this->getAttributesConfig($class);
+            $methods = $this->getMethods($class);
+            $methods = array_reverse($methods);
+            foreach ($methods as $method) {
+                $name = strtolower($method->name->name);
+                if (!in_array($name, $config)) {
+                    continue;
+                }
+                if (!is_null($method->returnType)) {
+                    continue;
+                }
+                $hasAttribute = false;
+                foreach ($method->getComments() as $comment) {
+                    if ($comment->getText() == '#[\ReturnTypeWillChange]') {
+                        $hasAttribute = true;
+                        break;
+                    }
+                }
+                if ($hasAttribute) {
+                    continue;
+                }
+                $code = implode('', [
+                    substr($code, 0, $method->getStartFilePos()),
+                    "#[\ReturnTypeWillChange]\n    ",
+                    substr($code, $method->getStartFilePos()),
+                ]);
+            }
+        }
+        return $code;
+    }
+
+    private function rewriteArguments(string $code): string
     {
         $ast = $this->getAst($code);
         $classes = $this->getClasses($ast);
