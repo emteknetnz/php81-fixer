@@ -70,6 +70,17 @@ class MyClass implements Iterator
             )
         ).'([./\\\\]|$)%';
 
+        $summary = preg_replace(
+            '/' . preg_quote($stringPiece, '/') . '/i',
+            '<mark>$0</mark>',
+            $summary
+        );
+
+        $summary = preg_replace('/' . preg_quote($stringPiece, '/') . '/i',
+            '<mark>$0</mark>',
+            $summary
+        );
+
         return rtrim(parse_url($base, PHP_URL_PATH), '/');
     }
 }

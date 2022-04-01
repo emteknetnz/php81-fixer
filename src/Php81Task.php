@@ -110,7 +110,7 @@ class Php81Task extends BuildTask
 
     public function run($request)
     {
-        $useSampleCode = true;
+        $useSampleCode = false;
         if ($useSampleCode) {
             $code = $this->getSampleCode();
             $code = $this->rewriteArguments($code);
@@ -333,6 +333,11 @@ class Php81Task extends BuildTask
                 $ternaryOffset = 0;
                 $prevStartLine = 0;
                 foreach ($funcCalls as $funcCall) {
+                    // don't attempt to rewrite multiline function calls, they can break if there
+                    // is a combination of nested function calls and ternary
+                    if ($funcCall->getStartLine() != $funcCall->getEndLine()) {
+                        continue;
+                    }
                     $name = $funcCall->name->parts[0] ?? '';
                     $config = $this->getFuncCallConfig($name);
                     if (empty($config)) {
@@ -355,11 +360,6 @@ class Php81Task extends BuildTask
                         }
                         /** @var Expr $expr */
                         $expr = $arg->value;
-                        // don't attempt to rewrite multiline function calls, they can break if there
-                        // is a combination of nested function calls and ternary
-                        if ($expr->getStartLine() != $expr->getEndLine()) {
-                            continue;
-                        }
                         if ($prevStartLine != $expr->getStartLine()) {
                             $ternaryOffset = 0;
                             $prevStartLine = $expr->getStartLine();
@@ -369,12 +369,12 @@ class Php81Task extends BuildTask
                         $type = $a[1] ?? 'string';
                         if ($what == 'cast') {
                             $castStr = "($type) ";
-                            $ternaryOffset += strlen($castStr);
                             $code = implode('', [
                                 substr($code, 0, $expr->getStartFilePos()),
                                 $castStr,
                                 substr($code, $expr->getStartFilePos()),
                             ]);
+                            $ternaryOffset += strlen($castStr);
                         } elseif ($what == 'ternary') {
                             $a = [
                                 'string' => "''",
