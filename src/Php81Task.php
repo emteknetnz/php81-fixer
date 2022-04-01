@@ -110,7 +110,7 @@ class Php81Task extends BuildTask
 
     public function run($request)
     {
-        $useSampleCode = false;
+        $useSampleCode = true;
         if ($useSampleCode) {
             $code = $this->getSampleCode();
             $code = $this->rewriteArguments($code);

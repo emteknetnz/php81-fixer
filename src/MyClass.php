@@ -58,6 +58,7 @@ class MyClass implements Iterator
         $class = str_replace(' ', '', ucwords($type));
         $class = str_replace(' ', '', str_replace('a', 'b', $type));
         $class = str_replace(' ', '', ucwords($type));
+        rtrim(parse_url($base, PHP_URL_PATH), '/');
         
         // Replace all `*` with `[^\.][a-zA-Z0-9\-_\/\.]+`, and quote other characters
         $patternRegExp = '%(^|[/\\\\])'.implode(
@@ -81,6 +82,9 @@ class MyClass implements Iterator
             $summary
         );
 
-        return rtrim(parse_url($base, PHP_URL_PATH), '/');
+        preg_replace($this->filterPattern, '', $first) === preg_replace($this->filterPattern, '', $second);
+
+        str_replace(' ', '', ucwords($a)) . ucwords(str_replace(' ', '', $b));
+
     }
 }
