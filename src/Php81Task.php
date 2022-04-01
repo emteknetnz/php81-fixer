@@ -11,9 +11,7 @@ use PhpParser\Node\Expr\Variable;
 use PhpParser\ParserFactory;
 use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\ClassMethod;
-use PhpParser\Node\Stmt\Expression;
 use PhpParser\Node\Stmt\Namespace_;
-use PhpParser\NodeAbstract;
 use SilverStripe\Dev\BuildTask;
 
 class Php81Task extends BuildTask
@@ -109,7 +107,7 @@ class Php81Task extends BuildTask
 
     public function run($request)
     {
-        $useSampleCode = false;
+        $useSampleCode = true;
         if ($useSampleCode) {
             $code = $this->getSampleCode();
             $code = $this->rewriteArguments($code);
@@ -171,7 +169,7 @@ class Php81Task extends BuildTask
         $lexer = new Lexer([
             'usedAttributes' => [
                 'comments',
-                //'startLine',
+                'startLine',
                 //'endLine',
                 //'startTokenPos',
                 //'endTokenPos',
@@ -186,7 +184,6 @@ class Php81Task extends BuildTask
             echo "Parse error: {$error->getMessage()}\n";
             die;
         }
-        // print_r($ast);
         return $ast;
     }
 
@@ -212,10 +209,19 @@ class Php81Task extends BuildTask
         foreach ($things as $thing) {
             if ($thing instanceof FuncCall) {
                 $funcCalls[] = $thing;
+                foreach ($thing->args ?? [] as $arg) {
+                    $this->recursiveAddFuncCalls($arg, $funcCalls);
+                }
             }
-            foreach (['expr', 'cond', 'left', 'right'] as $property) {
-                if (property_exists($thing, $property) && !is_null($thing->{$property})) {
-                    $this->recursiveAddFuncCalls($thing->{$property}, $funcCalls);
+            if (is_object($thing)) {
+                foreach (['expr', 'cond', 'left', 'right', 'value'] as $property) { // 'value
+                    try {
+                        if (property_exists($thing, $property) && !is_null($thing->{$property})) {
+                            $this->recursiveAddFuncCalls($thing->{$property}, $funcCalls);
+                        }
+                    } catch (Error $e) {
+                        $a=1;
+                    }
                 }
             }
             if (!is_null($thing->stmts ?? null)) {
@@ -243,6 +249,7 @@ class Php81Task extends BuildTask
     private function rewriteCode(string $code): string
     {
         $code = $this->rewriteArguments($code);
+        // file_put_contents(BASE_PATH . '/out.php', $code);
         $code = $this->addMethodAttributes($code);
         return $code;
     }
@@ -318,6 +325,13 @@ class Php81Task extends BuildTask
             foreach ($methods as $method) {
                 $funcCalls = $this->getFuncCalls($method);
                 $funcCalls = array_reverse($funcCalls);
+                // ternaryOffset is to handle a edge case of nested function calls
+                // it'll only work if everythings together on a single line
+                // str_replace(' ', '', ucwords($type)); // original
+                // str_replace(' ', '', ucwords((string) $type) ?: ''); // correct
+                // str_replace(' ', '', ucwords((strin ?: ''g) $type)); // incorrect
+                $ternaryOffset = 0;
+                $lastStartLine = 0;
                 foreach ($funcCalls as $funcCall) {
                     $name = $funcCall->name->parts[0] ?? '';
                     $config = $this->getFuncCallConfig($name);
@@ -333,19 +347,27 @@ class Php81Task extends BuildTask
                         if (!($value instanceof Variable)) {
                             if (!($value instanceof PropertyFetch)) {
                                 if (!($value instanceof MethodCall)) {
-                                    continue;
+                                    if (!($value instanceof FuncCall)) {
+                                        continue;
+                                    }
                                 }
                             }
                         }
                         /** @var Expr $expr */
                         $expr = $arg->value;
+                        if ($lastStartLine != $expr->getStartLine()) {
+                            $ternaryOffset = 0;
+                            $lastStartLine = $expr->getStartLine();
+                        }
                         $a = explode('-', $what);
                         $what = $a[0];
                         $type = $a[1] ?? 'string';
                         if ($what == 'cast') {
+                            $castStr = "($type) ";
+                            $ternaryOffset += strlen($castStr);
                             $code = implode('', [
                                 substr($code, 0, $expr->getStartFilePos()),
-                                "($type) ",
+                                $castStr,
                                 substr($code, $expr->getStartFilePos()),
                             ]);
                         } elseif ($what == 'ternary') {
@@ -356,11 +378,13 @@ class Php81Task extends BuildTask
                                 'array' => '[]'
                             ];
                             $v = $a[$type];
+                            $ternaryStr = " ?: $v";
                             $code = implode('', [
-                                substr($code, 0, $expr->getEndFilePos() + 1),
-                                " ?: $v",
-                                substr($code, $expr->getEndFilePos() + 1),
+                                substr($code, 0, $expr->getEndFilePos() + 1 + $ternaryOffset),
+                                $ternaryStr,
+                                substr($code, $expr->getEndFilePos() + 1 + $ternaryOffset),
                             ]);
+                            $ternaryOffset += strlen($ternaryStr);
                         }
                     }
                 }

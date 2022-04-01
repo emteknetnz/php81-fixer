@@ -53,5 +53,10 @@ class MyClass implements Iterator
         preg_match('/g/', $this->xstr);
         preg_match('/g/', $abc . $def);
         $base = basename($this->upLevels($pathname, $depth - 1));
+        str_replace('a', 'b', php_sapi_name());
+        $class = str_replace(' ', '', ucwords($type));
+        $class = str_replace(' ', '', str_replace('a', 'b', $type));
+        $class = str_replace(' ', '', ucwords($type));
+        return rtrim(parse_url($base, PHP_URL_PATH), '/');
     }
 }
