@@ -54,9 +54,22 @@ class MyClass implements Iterator
         preg_match('/g/', $abc . $def);
         $base = basename($this->upLevels($pathname, $depth - 1));
         str_replace('a', 'b', php_sapi_name());
+        $type = trim($type);
         $class = str_replace(' ', '', ucwords($type));
         $class = str_replace(' ', '', str_replace('a', 'b', $type));
         $class = str_replace(' ', '', ucwords($type));
+        
+        // Replace all `*` with `[^\.][a-zA-Z0-9\-_\/\.]+`, and quote other characters
+        $patternRegExp = '%(^|[/\\\\])'.implode(
+            '[^\.][a-zA-Z0-9\-_\/\.]+',
+            array_map(
+                function ($part) {
+                    return preg_quote($part, '%');
+                },
+                explode('*', trim($pattern, '/\\'))
+            )
+        ).'([./\\\\]|$)%';
+
         return rtrim(parse_url($base, PHP_URL_PATH), '/');
     }
 }

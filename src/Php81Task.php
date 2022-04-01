@@ -47,7 +47,10 @@ class Php81Task extends BuildTask
         'html_entity_decode' => [1 => 'cast'],
         'htmlentities' => [1 => 'cast'],
         'htmlspecialchars' => [1 => 'cast'],
-        'implode' => [2 => 'ternary-array'],
+        // Ternary is too hard once you get nested, multiline func_calls
+        // cast is easy because it goes in front and we work backwards when updating code i.e. array_reverse()
+        // however ternary goes after, so it messes up the startPos
+        'implode' => [2 => 'ternary-array'], 
         'lcfirst' => [1 => 'cast'],
         'ltrim' => [1 => 'cast'],
         'nl2br' => [1 => 'cast'],
@@ -170,7 +173,7 @@ class Php81Task extends BuildTask
             'usedAttributes' => [
                 'comments',
                 'startLine',
-                //'endLine',
+                'endLine',
                 //'startTokenPos',
                 //'endTokenPos',
                 'startFilePos',
@@ -214,13 +217,9 @@ class Php81Task extends BuildTask
                 }
             }
             if (is_object($thing)) {
-                foreach (['expr', 'cond', 'left', 'right', 'value'] as $property) { // 'value
-                    try {
-                        if (property_exists($thing, $property) && !is_null($thing->{$property})) {
-                            $this->recursiveAddFuncCalls($thing->{$property}, $funcCalls);
-                        }
-                    } catch (Error $e) {
-                        $a=1;
+                foreach (['expr', 'cond', 'left', 'right', 'value'] as $property) {
+                    if (property_exists($thing, $property) && !is_null($thing->{$property})) {
+                        $this->recursiveAddFuncCalls($thing->{$property}, $funcCalls);
                     }
                 }
             }
@@ -249,7 +248,8 @@ class Php81Task extends BuildTask
     private function rewriteCode(string $code): string
     {
         $code = $this->rewriteArguments($code);
-        // file_put_contents(BASE_PATH . '/out.php', $code);
+        // output to temp file in case it gets mangled, makes diagnosing much easier
+        file_put_contents(BASE_PATH . '/out.php', $code);
         $code = $this->addMethodAttributes($code);
         return $code;
     }
@@ -331,7 +331,7 @@ class Php81Task extends BuildTask
                 // str_replace(' ', '', ucwords((string) $type) ?: ''); // correct
                 // str_replace(' ', '', ucwords((strin ?: ''g) $type)); // incorrect
                 $ternaryOffset = 0;
-                $lastStartLine = 0;
+                $prevStartLine = 0;
                 foreach ($funcCalls as $funcCall) {
                     $name = $funcCall->name->parts[0] ?? '';
                     $config = $this->getFuncCallConfig($name);
@@ -355,9 +355,14 @@ class Php81Task extends BuildTask
                         }
                         /** @var Expr $expr */
                         $expr = $arg->value;
-                        if ($lastStartLine != $expr->getStartLine()) {
+                        // don't attempt to rewrite multiline function calls, they can break if there
+                        // is a combination of nested function calls and ternary
+                        if ($expr->getStartLine() != $expr->getEndLine()) {
+                            continue;
+                        }
+                        if ($prevStartLine != $expr->getStartLine()) {
                             $ternaryOffset = 0;
-                            $lastStartLine = $expr->getStartLine();
+                            $prevStartLine = $expr->getStartLine();
                         }
                         $a = explode('-', $what);
                         $what = $a[0];
