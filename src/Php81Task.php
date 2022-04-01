@@ -5,6 +5,7 @@ use PhpParser\Lexer;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\FuncCall;
+use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\PropertyFetch;
 use PhpParser\Node\Expr\Variable;
 use PhpParser\ParserFactory;
@@ -43,6 +44,7 @@ class Php81Task extends BuildTask
 
     private const FUNC_CALL_CONFIG = [
         // [$argPos => 'cast|ternary'] - where $argPos is 1 indexed i.e. first arg = 1, not 0'
+        // string functions
         'explode' => [2 => 'cast'],
         'html_entity_decode' => [1 => 'cast'],
         'htmlentities' => [1 => 'cast'],
@@ -84,26 +86,30 @@ class Php81Task extends BuildTask
         'preg_replace' => [3 => 'ternary'],
         'preg_replace_callback' => [3 => 'ternary'],
         'preg_split' => [2 => 'cast'],
-        // TODO https://www.php.net/manual/en/function.basename.php <<<<
+        // file system functions
+        // https://www.php.net/manual/en/function.basename.php
         'basename' => [1 => 'cast'],
-        // '' => [1 => 'cast'], // etc
-        // '' => [1 => 'cast'],
-        // '' => [1 => 'cast'],
-        // '' => [1 => 'cast'],
-        // '' => [1 => 'cast'],
-        // '' => [1 => 'cast'],
-        // '' => [1 => 'cast'],
-        // '' => [1 => 'cast'],
-        // '' => [1 => 'cast'],
-        // '' => [1 => 'cast'],
-        // '' => [1 => 'cast'],
-        // '' => [1 => 'cast'],
-        // TODO: if (strpos($arg, '#') !== false) { not detected -- need to handle inside if statements
+        'dirname' => [1 => 'cast'],
+        'file_exists' => [1 => 'cast'],
+        'is_dir' => [1 => 'cast'],
+        'is_file' => [1 => 'cast'],
+        'is_link' => [1 => 'cast'],
+        'realpath' => [1 => 'cast'],
+        // url functions
+        // https://www.php.net/manual/en/function.parse-url.php
+        'base64_decode' => [1 => 'cast'],
+        'base64_encode' => [1 => 'cast'],
+        'get_headers' => [1 => 'cast'],
+        'parse_url' => [1 => 'cast'],
+        'rawurldecode' => [1 => 'cast'],
+        'rawurlencode' => [1 => 'cast'],
+        'urldecode' => [1 => 'cast'],
+        'urlencode' => [1 => 'cast'],
     ];
 
     public function run($request)
     {
-        $useSampleCode = true;
+        $useSampleCode = false;
         if ($useSampleCode) {
             $code = $this->getSampleCode();
             $code = $this->rewriteArguments($code);
@@ -323,9 +329,12 @@ class Php81Task extends BuildTask
                         $a = $argNum - 1;
                         /** @var Arg $arg */
                         $arg = $funcCall->args[$a] ?? null;
-                        if (!(($arg->value ?? null) instanceof Variable)) {
-                            if (!(($arg->value ?? null) instanceof PropertyFetch)) {
-                                continue;
+                        $value = $arg->value ?? null;
+                        if (!($value instanceof Variable)) {
+                            if (!($value instanceof PropertyFetch)) {
+                                if (!($value instanceof MethodCall)) {
+                                    continue;
+                                }
                             }
                         }
                         /** @var Expr $expr */

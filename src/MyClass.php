@@ -51,5 +51,7 @@ class MyClass implements Iterator
         }
         preg_match('/g/', (string) $xstr);
         preg_match('/g/', $this->xstr);
+        preg_match('/g/', $abc . $def);
+        $base = basename($this->upLevels($pathname, $depth - 1));
     }
 }
