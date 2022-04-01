@@ -5,6 +5,7 @@ use PhpParser\Lexer;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\FuncCall;
+use PhpParser\Node\Expr\PropertyFetch;
 use PhpParser\Node\Expr\Variable;
 use PhpParser\ParserFactory;
 use PhpParser\Node\Stmt\Class_;
@@ -102,7 +103,7 @@ class Php81Task extends BuildTask
 
     public function run($request)
     {
-        $useSampleCode = false;
+        $useSampleCode = true;
         if ($useSampleCode) {
             $code = $this->getSampleCode();
             $code = $this->rewriteArguments($code);
@@ -323,18 +324,20 @@ class Php81Task extends BuildTask
                         /** @var Arg $arg */
                         $arg = $funcCall->args[$a] ?? null;
                         if (!(($arg->value ?? null) instanceof Variable)) {
-                            continue;
+                            if (!(($arg->value ?? null) instanceof PropertyFetch)) {
+                                continue;
+                            }
                         }
-                        /** @var Variable $variable */
-                        $variable = $arg->value;
+                        /** @var Expr $expr */
+                        $expr = $arg->value;
                         $a = explode('-', $what);
                         $what = $a[0];
                         $type = $a[1] ?? 'string';
                         if ($what == 'cast') {
                             $code = implode('', [
-                                substr($code, 0, $variable->getStartFilePos()),
+                                substr($code, 0, $expr->getStartFilePos()),
                                 "($type) ",
-                                substr($code, $variable->getStartFilePos()),
+                                substr($code, $expr->getStartFilePos()),
                             ]);
                         } elseif ($what == 'ternary') {
                             $a = [
@@ -345,9 +348,9 @@ class Php81Task extends BuildTask
                             ];
                             $v = $a[$type];
                             $code = implode('', [
-                                substr($code, 0, $variable->getEndFilePos() + 1),
+                                substr($code, 0, $expr->getEndFilePos() + 1),
                                 " ?: $v",
-                                substr($code, $variable->getEndFilePos() + 1),
+                                substr($code, $expr->getEndFilePos() + 1),
                             ]);
                         }
                     }

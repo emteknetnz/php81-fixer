@@ -39,6 +39,8 @@ class MyClass implements Iterator
         preg_match('/g/', $str);
     }
 
+    private $xstr = '';
+
     public function myMethod($foo)
     {
         $xstr = 'xyz';
@@ -48,5 +50,6 @@ class MyClass implements Iterator
             $xstr = 1;
         }
         preg_match('/g/', (string) $xstr);
+        preg_match('/g/', $this->xstr);
     }
 }
