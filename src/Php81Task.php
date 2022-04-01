@@ -11,6 +11,7 @@ use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\Expression;
 use PhpParser\Node\Stmt\Namespace_;
+use PhpParser\NodeAbstract;
 use SilverStripe\Dev\BuildTask;
 
 class Php81Task extends BuildTask
@@ -84,42 +85,50 @@ class Php81Task extends BuildTask
         'preg_split' => [2 => 'cast'],
         // TODO https://www.php.net/manual/en/function.basename.php <<<<
         'basename' => [1 => 'cast'],
-        '' => [1 => 'cast'], // etc
-        '' => [1 => 'cast'],
-        '' => [1 => 'cast'],
-        '' => [1 => 'cast'],
-        '' => [1 => 'cast'],
-        '' => [1 => 'cast'],
-        '' => [1 => 'cast'],
-        '' => [1 => 'cast'],
-        '' => [1 => 'cast'],
-        '' => [1 => 'cast'],
-        '' => [1 => 'cast'],
-        '' => [1 => 'cast'],
+        // '' => [1 => 'cast'], // etc
+        // '' => [1 => 'cast'],
+        // '' => [1 => 'cast'],
+        // '' => [1 => 'cast'],
+        // '' => [1 => 'cast'],
+        // '' => [1 => 'cast'],
+        // '' => [1 => 'cast'],
+        // '' => [1 => 'cast'],
+        // '' => [1 => 'cast'],
+        // '' => [1 => 'cast'],
+        // '' => [1 => 'cast'],
+        // '' => [1 => 'cast'],
         // TODO: if (strpos($arg, '#') !== false) { not detected -- need to handle inside if statements
     ];
 
     public function run($request)
     {
-        $vendorDirs = [
-            BASE_PATH . '/vendor/dnadesign',
-            BASE_PATH . '/vendor/silverstripe',
-            BASE_PATH . '/vendor/symbiote',
-            BASE_PATH . '/vendor/bringyourownideas',
-        ];
-        foreach ($vendorDirs as $vendorDir) {
-            if (!file_exists($vendorDir)) {
-                continue;
-            }
-            foreach (scandir($vendorDir) as $subdir) {
-                if (in_array($subdir, ['.', '..'])) {
+        $useSampleCode = false;
+        if ($useSampleCode) {
+            $code = $this->getSampleCode();
+            $code = $this->rewriteArguments($code);
+            echo $code;
+            echo "\n";
+        } else {
+            $vendorDirs = [
+                BASE_PATH . '/vendor/dnadesign',
+                BASE_PATH . '/vendor/silverstripe',
+                BASE_PATH . '/vendor/symbiote',
+                BASE_PATH . '/vendor/bringyourownideas',
+            ];
+            foreach ($vendorDirs as $vendorDir) {
+                if (!file_exists($vendorDir)) {
                     continue;
                 }
-                $dir = "$vendorDir/$subdir";
-                foreach (['src', 'code', 'tests'] as $d) {
-                    $subdir = "$dir/$d";
-                    if (file_exists($subdir)) {
-                        $this->update($subdir);
+                foreach (scandir($vendorDir) as $subdir) {
+                    if (in_array($subdir, ['.', '..'])) {
+                        continue;
+                    }
+                    $dir = "$vendorDir/$subdir";
+                    foreach (['src', 'code', 'tests'] as $d) {
+                        $subdir = "$dir/$d";
+                        if (file_exists($subdir)) {
+                            $this->update($subdir);
+                        }
                     }
                 }
             }
@@ -190,28 +199,31 @@ class Php81Task extends BuildTask
         return array_filter($class->stmts, fn($v) => $v instanceof ClassMethod);
     }
 
-    private function recursiveAddFuncCalls(Expr $expr, array &$funcCalls): void
+    private function recursiveAddFuncCalls($thingy, array &$funcCalls): void
     {
-        if ($expr instanceof FuncCall) {
-            $funcCalls[] = $expr;
-        }
-        if (property_exists($expr, 'expr')) {
-            if (is_null($expr->expr)) {
-                return;
+        $things = is_array($thingy) ? $thingy : [$thingy];
+        foreach ($things as $thing) {
+            if ($thing instanceof FuncCall) {
+                $funcCalls[] = $thing;
             }
-            $this->recursiveAddFuncCalls($expr->expr, $funcCalls);
+            foreach (['expr', 'cond', 'left', 'right'] as $property) {
+                if (property_exists($thing, $property) && !is_null($thing->{$property})) {
+                    $this->recursiveAddFuncCalls($thing->{$property}, $funcCalls);
+                }
+            }
+            if (!is_null($thing->stmts ?? null)) {
+                foreach ($thing->stmts as $stmt) {
+                    $this->recursiveAddFuncCalls($stmt, $funcCalls);
+                };
+            }
         }
     }
 
     private function getFuncCalls(ClassMethod $method): array
     {
         $funcCalls = [];
-        /** @var Expression $expression */
-        foreach ($method->stmts ?? [] as $expression) {
-            if (is_null($expression->expr ?? null)) {
-                continue;
-            }
-            $this->recursiveAddFuncCalls($expression->expr, $funcCalls);
+        foreach ($method->stmts ?? [] as $stmts) {
+            $this->recursiveAddFuncCalls($stmts, $funcCalls);
         }
         return $funcCalls;
     }
@@ -310,7 +322,7 @@ class Php81Task extends BuildTask
                         $a = $argNum - 1;
                         /** @var Arg $arg */
                         $arg = $funcCall->args[$a] ?? null;
-                        if (!($arg->value ?? null instanceof Variable)) {
+                        if (!(($arg->value ?? null) instanceof Variable)) {
                             continue;
                         }
                         /** @var Variable $variable */

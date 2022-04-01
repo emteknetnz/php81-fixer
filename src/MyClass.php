@@ -34,8 +34,8 @@ class MyClass implements Iterator
     public function secondMethod($foo)
     {
         $str = 'xyz';
-        $a = str_replace('a', 'b', 'c');
-        $b = str_replace('x', 'y', $str);
+        // $a = str_replace('a', 'b', 'c');
+        // $b = str_replace('x', 'y', $str);
         preg_match('/g/', $str);
     }
 
@@ -44,6 +44,9 @@ class MyClass implements Iterator
         $xstr = 'xyz';
         $a = str_replace('a', 'b', 'c');
         $b = str_replace('x', 'y', $xstr ?: '');
+        if (str_replace('1', '2', $xstr) == 'def' || strtoupper($xstr) == 'DEF' || strtolower($xstr) == 'def') {
+            $xstr = 1;
+        }
         preg_match('/g/', (string) $xstr);
     }
 }
