@@ -106,6 +106,8 @@ class MyClass implements Iterator
         str_replace('a', 'b', $type);
 
         return 0 === substr_compare(sprintf('%032b', ip2long($requestIP)), sprintf('%032b', ip2long($address)), 0, $netmask);
+
+        number_format(round($this->value, $precision), $precision);
     }
 }
 CLASS;

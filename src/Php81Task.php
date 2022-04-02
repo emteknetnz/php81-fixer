@@ -77,29 +77,33 @@ class Php81Task extends BuildTask
 
     private function rewriteCode(string $code): string
     {
-        $code = $this->rewriteArguments($code, 'cast');
-        // output to temp file in case it gets mangled, makes diagnosing much easier
-        file_put_contents(BASE_PATH . '/out.php', $code);
-        // only rewrite a single ternary func+argNum at a time.  Reason for this is that
-        // nested, multiline funcCall's that include ternarys because impossible to manage
-        $ternaryConfig = $this->getFuncCallTernaryConfig();
-        foreach ($ternaryConfig as $func => $argNums) {
-            if (strpos($code, $func) === false) {
-                continue;
-            }
-            foreach ($argNums as $argNum) {
-                for ($i = 0; $i <= 1000; $i++) {
-                    $oldCode = $code;
-                    $code = $this->rewriteArguments($code, 'ternary', $func, $argNum);
-                    if ($code == $oldCode) {
-                        break;
-                    }
-                    if ($i == 1000) {
-                        echo "Reached 1000 iterations, something probably went wrong, exiting\n";
-                        exit;
+        // only rewrite a single func+argNum at a time.  Reason for this is that
+        // nested, funcCalls have too many edge cases to manage impossible to manage
+        $config = $this->getSimpleFuncCallConfig();
+        foreach (array_keys($config) as $type) {
+            foreach ($config[$type] as $func => $argNums) {
+                if (strpos($code, $func) === false) {
+                    continue;
+                }
+                foreach ($argNums as $argNum) {
+                    for ($i = 0; $i <= 1000; $i++) {
+                        $oldCode = $code;
+                        if ($type == 'cast') {
+                            $code = $this->rewriteArguments($code, 'cast', $func, $argNum);
+                        } else {
+                            $code = $this->rewriteArguments($code, 'ternary', $func, $argNum);
+                        }
+                        // output to temp file in case it gets mangled, makes diagnosing much easier
+                        file_put_contents(BASE_PATH . '/out.php', $code);
+                        if ($code == $oldCode) {
+                            break;
+                        }
+                        if ($i == 1000) {
+                            echo "Reached 1000 iterations, something probably went wrong, exiting\n";
+                            exit;
+                        }
                     }
                 }
-                // file_put_contents(BASE_PATH . '/out.php', $code);
             }
         }
         $code = $this->addMethodAttributes($code);
@@ -260,15 +264,14 @@ class Php81Task extends BuildTask
         return $code;
     }
 
-    private function getFuncCallTernaryConfig()
+    private function getSimpleFuncCallConfig()
     {
         $ret = [];
         foreach (Php81Consts::FUNC_CALL_CONFIG as $func => $arr) {
             foreach ($arr['params'] as $paramNum => $param) {
-                if (strpos($param['whatType'], 'ternary') !== false) {
-                    $ret[$func] ??= [];
-                    $ret[$func][] = $paramNum;
-                }
+                $what = strpos($param['whatType'], 'ternary') !== false ? 'ternary' : 'cast';
+                $ret[$what][$func] ??= [];
+                $ret[$what][$func][] = $paramNum;
             }
         }
         return $ret;
@@ -277,8 +280,8 @@ class Php81Task extends BuildTask
     private function rewriteArguments(
         string $code,
         string $_what,
-        string $_func = '',
-        int $_argNum = -1
+        string $_func,
+        int $_argNum
     ): string {
         $ast = $this->getAst($code);
         $classes = $this->getClasses($ast);
@@ -314,13 +317,8 @@ class Php81Task extends BuildTask
                         $tmp = explode('-', $paramConfig['whatType']);
                         $what = $tmp[0];
                         $type = $tmp[1] ?? 'string';
-                        if ($_what != $what) {
+                        if ($_what != $what || $_func != $func || $_argNum != $argNum) {
                             continue;
-                        }
-                        if ($_what == 'ternary') {
-                            if ($_func != $func || $_argNum != $argNum) {
-                                continue;
-                            }
                         }
                         /** @var Arg $arg */
                         $arg = $funcCall->args[$argNum] ?? null;
