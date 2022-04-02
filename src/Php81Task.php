@@ -110,15 +110,15 @@ class Php81Task extends BuildTask
 
     private function getSampleCode(): string
     {
-        return file_get_contents(__DIR__ . '/MyClass.php');
+        return str_replace(['<<<CLASS', 'CLASS;'], '', file_get_contents(__DIR__ . '/MyClass.php'));
     }
 
     public function run($request)
     {
-        $useSampleCode = false;
+        $useSampleCode = false; // sboyd
         if ($useSampleCode) {
             $code = $this->getSampleCode();
-            $code = $this->rewriteArguments($code);
+            $code = $this->rewriteCode($code);
             echo $code;
             echo "\n";
         } else {
@@ -156,6 +156,9 @@ class Php81Task extends BuildTask
             if (is_dir($path)) {
                 continue;
             }
+            if (!preg_match('#(constants.php|HTTPRequest.php)#', $path)) {
+                continue; // tmp
+            }
             $originalCode = file_get_contents($path);
             $newCode = $this->rewriteCode($originalCode);
             if ($originalCode != $newCode) {
@@ -167,7 +170,6 @@ class Php81Task extends BuildTask
         }
     }
 
-    // sboyd
     private function rewriteCode(string $code): string
     {
         $code = $this->rewriteArguments($code, 'cast');
@@ -185,7 +187,7 @@ class Php81Task extends BuildTask
                         break;
                     }
                     if ($i == 1000) {
-                        echo "Reached 1000 iterations, something probably went wrong, existing";
+                        echo "Reached 1000 iterations, something probably went wrong, exiting\n";
                         exit;
                     }
                 }
@@ -369,12 +371,12 @@ class Php81Task extends BuildTask
                         $tmp = explode('-', $whatType);
                         $what = $tmp[0];
                         $type = $tmp[1] ?? 'string';
-                        if ($what != $_what) {
+                        if ($_what != $what) {
                             continue;
                         }
-                        if ($what == 'ternary') {
+                        if ($_what == 'ternary') {
                             if ($_func != $func || $_argNum != $argNum) {
-                                return $code;
+                                continue;
                             }
                         }
                         $a = $argNum - 1;
