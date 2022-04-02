@@ -30,6 +30,9 @@ function singleType($returnType) {
 
 function whatType($type) {
   $types = explode('|', $type);
+  // favour string over array for instances like preg_replace 3rd param whose type is array|string
+  // putting in an array for 3rd param here leads to an array return type instead of string
+  usort($types, fn($a,$b) => $a == 'string' ? -1 : 1);
   if (count($types) == 1) {
     if (in_array($type, ['string', 'int', 'float', 'bool'])) {
       return "cast-$type";

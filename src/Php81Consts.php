@@ -54,7 +54,7 @@ class Php81Consts
             'params' => [
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-int',
+                    'whatType' => 'ternary-float',
                     'name' => 'num',
                     'type' => 'int|float',
                 ],
@@ -1906,7 +1906,7 @@ class Php81Consts
             'params' => [
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-int',
+                    'whatType' => 'ternary-float',
                     'name' => 'num',
                     'type' => 'int|float',
                 ],
@@ -5801,7 +5801,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-int',
                     'name' => 'options',
                     'type' => 'array|int',
                 ],
@@ -5821,7 +5821,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-int',
                     'name' => 'options',
                     'type' => 'array|int',
                 ],
@@ -5862,7 +5862,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-int',
                     'name' => 'options',
                     'type' => 'array|int',
                 ],
@@ -5882,7 +5882,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-int',
                     'name' => 'options',
                     'type' => 'array|int',
                 ],
@@ -6060,7 +6060,7 @@ class Php81Consts
             'params' => [
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-int',
+                    'whatType' => 'ternary-float',
                     'name' => 'num',
                     'type' => 'int|float',
                 ],
@@ -13149,7 +13149,7 @@ class Php81Consts
             'params' => [
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'separator',
                     'type' => 'array|string',
                 ],
@@ -15547,7 +15547,7 @@ class Php81Consts
             'params' => [
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'separator',
                     'type' => 'array|string',
                 ],
@@ -16534,13 +16534,13 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'base',
                     'type' => 'array|string',
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'filter',
                     'type' => 'array|string',
                 ],
@@ -17020,13 +17020,13 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'base',
                     'type' => 'array|string',
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'filter',
                     'type' => 'array|string',
                 ],
@@ -17226,13 +17226,13 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'base',
                     'type' => 'array|string',
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'filter',
                     'type' => 'array|string',
                 ],
@@ -17961,7 +17961,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'additional_headers',
                     'type' => 'array|string',
                 ],
@@ -18001,7 +18001,7 @@ class Php81Consts
             'params' => [
                 [
                     'rewrite' => false,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'value',
                     'type' => 'array|string|null',
                 ],
@@ -18067,7 +18067,7 @@ class Php81Consts
             'params' => [
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'string',
                     'type' => 'array|string',
                 ],
@@ -18079,7 +18079,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => false,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'from_encoding',
                     'type' => 'array|string|null',
                 ],
@@ -18125,7 +18125,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'from_encoding',
                     'type' => 'array|string',
                 ],
@@ -18197,7 +18197,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => false,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'encodings',
                     'type' => 'array|string|null',
                 ],
@@ -18217,7 +18217,7 @@ class Php81Consts
             'params' => [
                 [
                     'rewrite' => false,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'encoding',
                     'type' => 'array|string|null',
                 ],
@@ -18826,7 +18826,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'additional_headers',
                     'type' => 'array|string',
                 ],
@@ -22226,7 +22226,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-int',
+                    'whatType' => 'ternary-float',
                     'name' => 'num',
                     'type' => 'int|float',
                 ],
@@ -22470,7 +22470,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-int',
+                    'whatType' => 'ternary-float',
                     'name' => 'value',
                     'type' => 'int|float',
                 ],
@@ -26033,19 +26033,19 @@ class Php81Consts
             'params' => [
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'pattern',
                     'type' => 'array|string',
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'replacement',
                     'type' => 'array|string',
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'subject',
                     'type' => 'array|string',
                 ],
@@ -26211,19 +26211,19 @@ class Php81Consts
             'params' => [
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'pattern',
                     'type' => 'array|string',
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'replacement',
                     'type' => 'array|string',
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'subject',
                     'type' => 'array|string',
                 ],
@@ -26249,7 +26249,7 @@ class Php81Consts
             'params' => [
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'pattern',
                     'type' => 'array|string',
                 ],
@@ -26261,7 +26261,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'subject',
                     'type' => 'array|string',
                 ],
@@ -26299,7 +26299,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'subject',
                     'type' => 'array|string',
                 ],
@@ -26459,7 +26459,7 @@ class Php81Consts
             'params' => [
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'command',
                     'type' => 'array|string',
                 ],
@@ -26679,7 +26679,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-int',
+                    'whatType' => 'ternary-float',
                     'name' => 'step',
                     'type' => 'int|float',
                 ],
@@ -27245,7 +27245,7 @@ class Php81Consts
             'params' => [
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-int',
+                    'whatType' => 'ternary-float',
                     'name' => 'num',
                     'type' => 'int|float',
                 ],
@@ -27629,7 +27629,7 @@ class Php81Consts
             'params' => [
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-int',
                     'name' => 'lifetime_or_options',
                     'type' => 'array|int',
                 ],
@@ -27864,7 +27864,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-int',
                     'name' => 'expires_or_options',
                     'type' => 'array|int',
                 ],
@@ -27940,7 +27940,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-int',
                     'name' => 'expires_or_options',
                     'type' => 'array|int',
                 ],
@@ -31746,19 +31746,19 @@ class Php81Consts
             'params' => [
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'search',
                     'type' => 'array|string',
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'replace',
                     'type' => 'array|string',
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'subject',
                     'type' => 'array|string',
                 ],
@@ -31830,19 +31830,19 @@ class Php81Consts
             'params' => [
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'search',
                     'type' => 'array|string',
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'replace',
                     'type' => 'array|string',
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'subject',
                     'type' => 'array|string',
                 ],
@@ -32230,7 +32230,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'wrapper_or_options',
                     'type' => 'array|string',
                 ],
@@ -33075,7 +33075,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => false,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'allowed_tags',
                     'type' => 'array|string|null',
                 ],
@@ -33559,7 +33559,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'from',
                     'type' => 'array|string',
                 ],
@@ -33689,25 +33689,25 @@ class Php81Consts
             'params' => [
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'string',
                     'type' => 'array|string',
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'replace',
                     'type' => 'array|string',
                 ],
                 [
                     'rewrite' => true,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-int',
                     'name' => 'offset',
                     'type' => 'array|int',
                 ],
                 [
                     'rewrite' => false,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-int',
                     'name' => 'length',
                     'type' => 'array|int|null',
                 ],
@@ -34140,7 +34140,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => false,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'config',
                     'type' => 'array|string|null',
                 ],
@@ -34172,7 +34172,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => false,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'config',
                     'type' => 'array|string|null',
                 ],
@@ -34198,7 +34198,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => false,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'config',
                     'type' => 'array|string|null',
                 ],
@@ -34230,7 +34230,7 @@ class Php81Consts
                 ],
                 [
                     'rewrite' => false,
-                    'whatType' => 'ternary-array',
+                    'whatType' => 'ternary-string',
                     'name' => 'config',
                     'type' => 'array|string|null',
                 ],
