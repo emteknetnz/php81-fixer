@@ -7,6 +7,7 @@ use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\PropertyFetch;
+use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Expr\Variable;
 use PhpParser\ParserFactory;
 use PhpParser\Node\Stmt\Class_;
@@ -327,7 +328,9 @@ class Php81Task extends BuildTask
                             if (!($value instanceof PropertyFetch)) {
                                 if (!($value instanceof MethodCall)) {
                                     if (!($value instanceof FuncCall)) {
-                                        continue;
+                                        if (!($value instanceof StaticCall)) {
+                                            continue;
+                                        }
                                     }
                                 }
                             }
