@@ -16,124 +16,13 @@ use SilverStripe\Dev\BuildTask;
 
 class Php81Task extends BuildTask
 {
-    private const ATTRIBUTES_CONFIG = [
-        // do not prefix interfaces with backslash, class_implements() always returns without them
-        'Iterator' => [
-            'current',
-            'key',
-            'valid',
-            'rewind',
-            'next'
-        ],
-        'IteratorAggregate' => [
-            // use lowercase method names
-            'getiterator'
-        ],
-        'Countable' => [
-            'count'
-        ],
-        'ArrayAccess' => [
-            'offsetexists',
-            'offsetget',
-            'offsetset',
-            'offsetunset',
-        ],
-    ];
-
-    private const FUNC_CALL_CONFIG = [
-        // [$argPos => 'cast|ternary'] - where $argPos is 1 indexed i.e. first arg = 1, not 0'
-        // string functions
-        'explode' => [2 => 'cast'],
-        'html_entity_decode' => [1 => 'cast'],
-        'htmlentities' => [1 => 'cast'],
-        'htmlspecialchars' => [1 => 'cast'],
-        // Ternary is too hard once you get nested, multiline func_calls
-        // cast is easy because it goes in front and we work backwards when updating code i.e. array_reverse()
-        // however ternary goes after, so it messes up the startPos
-        'implode' => [2 => 'ternary-array'], 
-        'lcfirst' => [1 => 'cast'],
-        'ltrim' => [1 => 'cast'],
-        'nl2br' => [1 => 'cast'],
-        'number_format' => [1 => 'cast-float'],
-        'parse_str' => [1 => 'cast'],
-        'rtrim' => [1 => 'cast'],
-        'str_contains' => [1 => 'cast', 2 => 'cast'],
-        'str_pad' => [1 => 'cast'],
-        'str_replace' => [3 => 'ternary'],
-        'str_split' => [1 => 'cast'],
-        'strcasecmp' => [1 => 'cast', 2 => 'cast'],
-        'strcmp' => [1 => 'cast', 2 => 'cast'],
-        'strip_tags' => [1 => 'cast'],
-        'stripcslashes' => [1 => 'cast'],
-        'stripos' => [1 => 'cast', 2 => 'cast'],
-        'stripslashes' => [1 => 'cast'],
-        'stristr' => [1 => 'cast', 2 => 'cast'],
-        'strlen' => [1 => 'cast'],
-        'strpos' => [1 => 'cast', 2 => 'cast'],
-        'strrchr' => [1 => 'cast', 2 => 'cast'],
-        'strripos' => [1 => 'cast', 2 => 'cast'],
-        'strrpos' => [1 => 'cast', 2 => 'cast'],
-        'strstr' => [1 => 'cast', 2 => 'cast'],
-        'strtok' => [1 => 'cast', 2 => 'cast'],
-        'strtolower' => [1 => 'cast'],
-        'strtotime' => [1 => 'cast'],
-        'strtoupper' => [1 => 'cast'],
-        'strtr' => [1 => 'cast', 2 => 'cast', 3 => 'cast'],
-        'substr' => [1 => 'cast'],
-        'trim' => [1 => 'cast'],
-        'ucfirst' => [1 => 'cast'],
-        'ucwords' => [1 => 'cast'],
-        'preg_match' => [2 => 'cast'],
-        'preg_quote' => [1 => 'cast'],
-        'preg_replace' => [3 => 'ternary'],
-        'preg_replace_callback' => [3 => 'ternary'],
-        'preg_split' => [2 => 'cast'],
-        // file system functions
-        // https://www.php.net/manual/en/function.basename.php
-        'basename' => [1 => 'cast'],
-        'dirname' => [1 => 'cast'],
-        'file_exists' => [1 => 'cast'],
-        'is_dir' => [1 => 'cast'],
-        'is_file' => [1 => 'cast'],
-        'is_link' => [1 => 'cast'],
-        'realpath' => [1 => 'cast'],
-        // url functions
-        // https://www.php.net/manual/en/function.parse-url.php
-        'base64_decode' => [1 => 'cast'],
-        'base64_encode' => [1 => 'cast'],
-        'get_headers' => [1 => 'cast'],
-        'parse_url' => [1 => 'cast'],
-        'rawurldecode' => [1 => 'cast'],
-        'rawurlencode' => [1 => 'cast'],
-        'urldecode' => [1 => 'cast'],
-        'urlencode' => [1 => 'cast'],
-        // network functions
-        // https://www.php.net/manual/en/function.setcookie.php
-        'setcookie' => [1 => 'cast', 2 => 'cast', 3 => 'cast-int', 4 => 'cast', 5 => 'cast', 6 => 'cast-bool', 7 => 'cast-bool'],
-    ];
-
     private function getSampleCode(): string
     {
         return str_replace(["<<<'CLASS'", 'CLASS;'], '', file_get_contents(__DIR__ . '/MyClass.php'));
     }
 
-    private function test()
-    {
-        $refl = new ReflectionFunction('strtoupper');
-        $doc = $refl->getDocComment();
-        $returnType = $refl->getReturnType();
-        $params = $refl->getParameters();
-        foreach ($params as $param) {
-            $paramType = $param->getType();
-            $a=1;
-        }
-        $a=1;
-        die;
-    }
-
     public function run($request)
     {
-        $this->test(); // <<<
         $useSampleCode = false; // sboyd
         if ($useSampleCode) {
             $code = $this->getSampleCode();
@@ -313,7 +202,7 @@ class Php81Task extends BuildTask
         $ret = [];
         $fqcn = implode('\\', $namespace->name->parts ?? []) . '\\' . $class->name->name;
         $fqcn = ltrim($fqcn, '\\');
-        foreach (self::ATTRIBUTES_CONFIG as $interface => $methods) {
+        foreach (Php81Consts::ATTRIBUTES_CONFIG as $interface => $methods) {
             try {
                 $implements = @class_implements($fqcn);
             } catch (\Error|\Exception $e) {
@@ -371,11 +260,26 @@ class Php81Task extends BuildTask
     private function getFuncCallTernaryConfig()
     {
         $ret = [];
-        foreach (self::FUNC_CALL_CONFIG as $func => $args) {
-            foreach ($args as $argNum => $what) {
-                if (strpos($what, 'ternary') !== false) {
+        // '_' => [
+        //     'return' => [
+        //         'singleType' => true,
+        //         'type' => 'string',
+        //     ],
+        //     'params' => [
+        //         [
+        //             'rewrite' => true,
+        //             'whatType' => 'cast-string',
+        //             'name' => 'message',
+        //             'type' => 'string',
+        //         ],
+        //     ],
+        // ],
+        foreach (Php81Consts::FUNC_CALL_CONFIG as $func => $arr) {
+            // $params = array_reverse($arr['params']);
+            foreach ($arr['params'] as $paramNum => $param) {
+                if (strpos($param['whatType'], 'ternary') !== false) {
                     $ret[$func] ??= [];
-                    $ret[$func][] = $argNum;
+                    $ret[$func][] = $paramNum;
                 }
             }
         }
@@ -386,7 +290,7 @@ class Php81Task extends BuildTask
         string $code,
         string $_what,
         string $_func = '',
-        int $_argNum = 0
+        int $_argNum = -1
     ): string {
         $ast = $this->getAst($code);
         $classes = $this->getClasses($ast);
@@ -410,13 +314,16 @@ class Php81Task extends BuildTask
                 $funcCalls = array_reverse($funcCalls);
                 foreach ($funcCalls as $funcCall) {
                     $func = $funcCall->name->parts[0] ?? '';
-                    $config = self::FUNC_CALL_CONFIG[$func] ?? [];
-                    if (empty($config)) {
+                    $funcCallConfig = Php81Consts::FUNC_CALL_CONFIG[$func] ?? [];
+                    if (empty($funcCallConfig)) {
                         continue;
                     }
-                    $config = array_reverse($config, true);
-                    foreach ($config as $argNum => $whatType) {
-                        $tmp = explode('-', $whatType);
+                    $funcCallConfig['params'] = array_reverse($funcCallConfig['params'], true);
+                    foreach ($funcCallConfig['params'] as $argNum => $paramConfig) {
+                        if (!$paramConfig['rewrite']) {
+                            continue;
+                        }
+                        $tmp = explode('-', $paramConfig['whatType']);
                         $what = $tmp[0];
                         $type = $tmp[1] ?? 'string';
                         if ($_what != $what) {
@@ -427,9 +334,8 @@ class Php81Task extends BuildTask
                                 continue;
                             }
                         }
-                        $a = $argNum - 1;
                         /** @var Arg $arg */
-                        $arg = $funcCall->args[$a] ?? null;
+                        $arg = $funcCall->args[$argNum] ?? null;
                         $value = $arg->value ?? null;
                         if (!($value instanceof Variable)) {
                             if (!($value instanceof PropertyFetch)) {

@@ -94,7 +94,8 @@ class MyClass implements Iterator
 
     public function InFuture()
     {
-        return strtotime($this->value) > DBDatetime::now()->getTimestamp();
+        // return strtotime($this->value) > DBDatetime::now()->getTimestamp();
+        str_replace('a', 'b', $type);
     }
 }
 CLASS;

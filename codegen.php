@@ -10,7 +10,12 @@ function rewrite($param, $type) {
   if ($param->allowsNull() || $param->isVariadic() || $param->isPassedByReference()) {
     return false;
   }
-  return in_array($type, ['string', 'int', 'float', 'bool', 'array']);
+  foreach (explode('|', $type) as $t) {
+    if (in_array($t, ['string', 'int', 'float', 'bool', 'array'])) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function singleType($returnType) {
@@ -31,14 +36,14 @@ function whatType($type) {
     } elseif ($type == 'array') {
       return "ternary-$type";
     }
-    return 'na';
   } else {
-    if (in_array('string', $types)) {
-      return "ternary-string";
-    } else {
-      return 'ternary-' . $types[0];
+    foreach ($types as $t) {
+      if (in_array($t, ['string', 'int', 'float', 'bool', 'array'])) {
+        return "ternary-$t";
+      }
     }
   }
+  return 'na';
 }
 
 $funcMap = [];
@@ -64,6 +69,9 @@ foreach (get_defined_functions()['internal'] as $func) {
     'params' => $params
   ];
 }
+
+// alpha sort keys
+ksort($funcMap);
 
 $lines = [];
 foreach ($funcMap as $func => $map) {
