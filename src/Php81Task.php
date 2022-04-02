@@ -156,9 +156,6 @@ class Php81Task extends BuildTask
             if (is_dir($path)) {
                 continue;
             }
-            if (!preg_match('#(constants.php|HTTPRequest.php)#', $path)) {
-                continue; // tmp
-            }
             $originalCode = file_get_contents($path);
             $newCode = $this->rewriteCode($originalCode);
             if ($originalCode != $newCode) {
@@ -262,10 +259,16 @@ class Php81Task extends BuildTask
         }
     }
 
-    private function getFuncCalls(ClassMethod $method): array
+    private function getFuncCalls($thing): array
     {
         $funcCalls = [];
-        foreach ($method->stmts ?? [] as $stmts) {
+        if (is_array($thing)) {
+            // passing in an ast for a nonclass file
+            $newThing = new stdClass();
+            $newThing->stmts = $thing;
+            $thing = $newThing;
+        }
+        foreach ($thing->stmts ?? [] as $stmts) {
             $this->recursiveAddFuncCalls($stmts, $funcCalls);
         }
         return $funcCalls;
@@ -354,11 +357,22 @@ class Php81Task extends BuildTask
         $ast = $this->getAst($code);
         $classes = $this->getClasses($ast);
         $classes = array_reverse($classes);
+        if (empty($classes)) {
+            $classes = ['nonclass'];
+        }
         foreach ($classes as $class) {
-            $methods = $this->getMethods($class);
-            $methods = array_reverse($methods);
+            if ($class == 'nonclass') {
+                $methods = ['nonclass'];
+            } else {
+                $methods = $this->getMethods($class);
+                $methods = array_reverse($methods);
+            }
             foreach ($methods as $method) {
-                $funcCalls = $this->getFuncCalls($method);
+                if ($method == 'nonclass') {
+                    $funcCalls = $this->getFuncCalls($ast);
+                } else {
+                    $funcCalls = $this->getFuncCalls($method);
+                }
                 $funcCalls = array_reverse($funcCalls);
                 foreach ($funcCalls as $funcCall) {
                     $func = $funcCall->name->parts[0] ?? '';
