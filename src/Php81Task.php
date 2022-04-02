@@ -4,6 +4,8 @@ use PhpParser\Error;
 use PhpParser\Lexer;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr;
+use PhpParser\Node\Expr\ClassConstFetch;
+use PhpParser\Node\Expr\ConstFetch;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\PropertyFetch;
@@ -176,16 +178,17 @@ class Php81Task extends BuildTask
                 }
             }
             if (is_object($thing)) {
-                foreach (['expr', 'cond', 'left', 'right', 'value'] as $property) {
+                foreach (['expr', 'stmts', 'cond', 'else', 'elseifs', 'left', 'right', 'value'] as $property) {
                     if (property_exists($thing, $property) && !is_null($thing->{$property})) {
-                        $this->recursiveAddFuncCalls($thing->{$property}, $funcCalls);
+                        if (is_array($thing->{$property})) {
+                            foreach ($thing->{$property} as $thang) {
+                                $this->recursiveAddFuncCalls($thang, $funcCalls);
+                            }
+                        } else {
+                            $this->recursiveAddFuncCalls($thing->{$property}, $funcCalls);
+                        }
                     }
                 }
-            }
-            if (!is_null($thing->stmts ?? null)) {
-                foreach ($thing->stmts as $stmt) {
-                    $this->recursiveAddFuncCalls($stmt, $funcCalls);
-                };
             }
         }
     }
@@ -232,11 +235,9 @@ class Php81Task extends BuildTask
         $ast = $this->getAst($code);
         $namespace = $this->getNamespace($ast);
         $classes = $this->getClasses($ast);
-        $classes = array_reverse($classes);
         foreach ($classes as $class) {
             $config = $this->getAttributesConfig($namespace, $class);
             $methods = $this->getMethods($class);
-            $methods = array_reverse($methods);
             foreach ($methods as $method) {
                 $name = strtolower($method->name->name);
                 if (!in_array($name, $config)) {
@@ -286,7 +287,6 @@ class Php81Task extends BuildTask
     ): string {
         $ast = $this->getAst($code);
         $classes = $this->getClasses($ast);
-        $classes = array_reverse($classes);
         if (empty($classes)) {
             $classes = ['nonclass'];
         }
@@ -295,7 +295,6 @@ class Php81Task extends BuildTask
                 $methods = ['nonclass'];
             } else {
                 $methods = $this->getMethods($class);
-                $methods = array_reverse($methods);
             }
             foreach ($methods as $method) {
                 if ($method == 'nonclass') {
@@ -303,14 +302,12 @@ class Php81Task extends BuildTask
                 } else {
                     $funcCalls = $this->getFuncCalls($method);
                 }
-                $funcCalls = array_reverse($funcCalls);
                 foreach ($funcCalls as $funcCall) {
                     $func = $funcCall->name->parts[0] ?? '';
                     $funcCallConfig = Php81Consts::FUNC_CALL_CONFIG[$func] ?? [];
                     if (empty($funcCallConfig)) {
                         continue;
                     }
-                    $funcCallConfig['params'] = array_reverse($funcCallConfig['params'], true);
                     foreach ($funcCallConfig['params'] as $argNum => $paramConfig) {
                         if (!$paramConfig['rewrite']) {
                             continue;
@@ -329,7 +326,11 @@ class Php81Task extends BuildTask
                                 if (!($value instanceof MethodCall)) {
                                     if (!($value instanceof FuncCall)) {
                                         if (!($value instanceof StaticCall)) {
-                                            continue;
+                                            if (!($value instanceof ConstFetch)) {
+                                                if (!($value instanceof ClassConstFetch)) {
+                                                    continue;
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -352,6 +353,7 @@ class Php81Task extends BuildTask
                                 "($type) ",
                                 substr($code, $expr->getStartFilePos()),
                             ]);
+                            return $code;
                         } elseif ($what == 'ternary') {
                             $a = [
                                 'string' => "''",

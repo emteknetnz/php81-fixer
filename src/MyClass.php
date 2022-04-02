@@ -109,7 +109,18 @@ class MyClass implements Iterator
 
         // number_format(round($this->value, $precision), $precision);
 
-        $parts = explode('.', Versioned::get_reading_mode());
+        // $parts = explode('.', Versioned::get_reading_mode());
+
+        // if (ContentNegotiator::getEnabled()) {
+        //     return true;
+        // } elseif (strtoupper($abc)) {
+        //     return false;
+        // } else {
+        //     return (substr($response->getBody(), 0, 5) == '<' . '?xml');
+        // }
+
+        strtoupper(GLOBAL_CONSTANT);
+        strtoupper(SomeClass::CONSTANT);
     }
 }
 CLASS;
