@@ -238,6 +238,8 @@ class Php81Task extends BuildTask
         foreach ($classes as $class) {
             $config = $this->getAttributesConfig($namespace, $class);
             $methods = $this->getMethods($class);
+            // reverse methods so 'updating from the bottom' so that character offests remain correct
+            $methods = array_reverse($methods);
             foreach ($methods as $method) {
                 $name = strtolower($method->name->name);
                 if (!in_array($name, $config)) {
