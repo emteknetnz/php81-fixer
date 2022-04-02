@@ -108,9 +108,14 @@ class Php81Task extends BuildTask
         'urlencode' => [1 => 'cast'],
     ];
 
+    private function getSampleCode(): string
+    {
+        return file_get_contents(__DIR__ . '/MyClass.php');
+    }
+
     public function run($request)
     {
-        $useSampleCode = true;
+        $useSampleCode = false;
         if ($useSampleCode) {
             $code = $this->getSampleCode();
             $code = $this->rewriteArguments($code);
@@ -162,9 +167,33 @@ class Php81Task extends BuildTask
         }
     }
 
-    private function getSampleCode(): string
+    // sboyd
+    private function rewriteCode(string $code): string
     {
-        return file_get_contents(__DIR__ . '/MyClass.php');
+        $code = $this->rewriteArguments($code, 'cast');
+        // output to temp file in case it gets mangled, makes diagnosing much easier
+        file_put_contents(BASE_PATH . '/out.php', $code);
+        // only rewrite a single ternary func+argNum at a time.  Reason for this is that
+        // nested, multiline funcCall's that include ternarys because impossible to manage
+        $ternaryConfig = $this->getFuncCallTernaryConfig();
+        foreach ($ternaryConfig as $func => $argNums) {
+            foreach ($argNums as $argNum) {
+                for ($i = 0; $i <= 1000; $i++) {
+                    $oldCode = $code;
+                    $code = $this->rewriteArguments($code, 'ternary', $func, $argNum);
+                    if ($code == $oldCode) {
+                        break;
+                    }
+                    if ($i == 1000) {
+                        echo "Reached 1000 iterations, something probably went wrong, existing";
+                        exit;
+                    }
+                }
+                file_put_contents(BASE_PATH . '/out.php', $code);
+            }
+        }
+        $code = $this->addMethodAttributes($code);
+        return $code;
     }
 
     private function getAst(string $code): array
@@ -240,20 +269,6 @@ class Php81Task extends BuildTask
         return $funcCalls;
     }
 
-    private function getFuncCallConfig(string $name)
-    {
-        return self::FUNC_CALL_CONFIG[$name] ?? [];
-    }
-
-    private function rewriteCode(string $code): string
-    {
-        $code = $this->rewriteArguments($code);
-        // output to temp file in case it gets mangled, makes diagnosing much easier
-        file_put_contents(BASE_PATH . '/out.php', $code);
-        $code = $this->addMethodAttributes($code);
-        return $code;
-    }
-
     private function getAttributesConfig(?Namespace_ $namespace, Class_ $class): array
     {
         $ret = [];
@@ -314,8 +329,26 @@ class Php81Task extends BuildTask
         return $code;
     }
 
-    private function rewriteArguments(string $code): string
+    private function getFuncCallTernaryConfig()
     {
+        $ret = [];
+        foreach (self::FUNC_CALL_CONFIG as $func => $args) {
+            foreach ($args as $argNum => $what) {
+                if (strpos($what, 'ternary') !== false) {
+                    $ret[$func] ??= [];
+                    $ret[$func][] = $argNum;
+                }
+            }
+        }
+        return $ret;
+    }
+
+    private function rewriteArguments(
+        string $code,
+        string $_what,
+        string $_func = '',
+        int $_argNum = 0
+    ): string {
         $ast = $this->getAst($code);
         $classes = $this->getClasses($ast);
         $classes = array_reverse($classes);
@@ -325,26 +358,25 @@ class Php81Task extends BuildTask
             foreach ($methods as $method) {
                 $funcCalls = $this->getFuncCalls($method);
                 $funcCalls = array_reverse($funcCalls);
-                // ternaryOffset is to handle a edge case of nested function calls
-                // it'll only work if everythings together on a single line
-                // str_replace(' ', '', ucwords($type)); // original
-                // str_replace(' ', '', ucwords((string) $type) ?: ''); // correct
-                // str_replace(' ', '', ucwords((strin ?: ''g) $type)); // incorrect
-                $ternaryOffset = 0;
-                $prevStartLine = 0;
                 foreach ($funcCalls as $funcCall) {
-                    // don't attempt to rewrite multiline function calls, they can break if there
-                    // is a combination of nested function calls and ternary
-                    if ($funcCall->getStartLine() != $funcCall->getEndLine()) {
-                        continue;
-                    }
-                    $name = $funcCall->name->parts[0] ?? '';
-                    $config = $this->getFuncCallConfig($name);
+                    $func = $funcCall->name->parts[0] ?? '';
+                    $config = self::FUNC_CALL_CONFIG[$func] ?? [];
                     if (empty($config)) {
                         continue;
                     }
                     $config = array_reverse($config, true);
-                    foreach ($config as $argNum => $what) {
+                    foreach ($config as $argNum => $whatType) {
+                        $tmp = explode('-', $whatType);
+                        $what = $tmp[0];
+                        $type = $tmp[1] ?? 'string';
+                        if ($what != $_what) {
+                            continue;
+                        }
+                        if ($what == 'ternary') {
+                            if ($_func != $func || $_argNum != $argNum) {
+                                return $code;
+                            }
+                        }
                         $a = $argNum - 1;
                         /** @var Arg $arg */
                         $arg = $funcCall->args[$a] ?? null;
@@ -360,21 +392,12 @@ class Php81Task extends BuildTask
                         }
                         /** @var Expr $expr */
                         $expr = $arg->value;
-                        if ($prevStartLine != $expr->getStartLine()) {
-                            $ternaryOffset = 0;
-                            $prevStartLine = $expr->getStartLine();
-                        }
-                        $a = explode('-', $what);
-                        $what = $a[0];
-                        $type = $a[1] ?? 'string';
                         if ($what == 'cast') {
-                            $castStr = "($type) ";
                             $code = implode('', [
                                 substr($code, 0, $expr->getStartFilePos()),
-                                $castStr,
+                                "($type) ",
                                 substr($code, $expr->getStartFilePos()),
                             ]);
-                            $ternaryOffset += strlen($castStr);
                         } elseif ($what == 'ternary') {
                             $a = [
                                 'string' => "''",
@@ -383,13 +406,12 @@ class Php81Task extends BuildTask
                                 'array' => '[]'
                             ];
                             $v = $a[$type];
-                            $ternaryStr = " ?: $v";
                             $code = implode('', [
-                                substr($code, 0, $expr->getEndFilePos() + 1 + $ternaryOffset),
-                                $ternaryStr,
-                                substr($code, $expr->getEndFilePos() + 1 + $ternaryOffset),
+                                substr($code, 0, $expr->getEndFilePos() + 1),
+                                " ?: $v",
+                                substr($code, $expr->getEndFilePos() + 1),
                             ]);
-                            $ternaryOffset += strlen($ternaryStr);
+                            return $code;
                         }
                     }
                 }
