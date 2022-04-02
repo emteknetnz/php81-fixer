@@ -23,7 +23,7 @@ class Php81Task extends BuildTask
 
     public function run($request)
     {
-        $useSampleCode = true; // sboyd
+        $useSampleCode = false; // sboyd
         if ($useSampleCode) {
             $code = $this->getSampleCode();
             $code = $this->rewriteCode($code);
@@ -82,23 +82,24 @@ class Php81Task extends BuildTask
         file_put_contents(BASE_PATH . '/out.php', $code);
         // only rewrite a single ternary func+argNum at a time.  Reason for this is that
         // nested, multiline funcCall's that include ternarys because impossible to manage
-        if (false) { // TODO speed up - to strpos() for all the fns in file first to see if even bother get ast
-            $ternaryConfig = $this->getFuncCallTernaryConfig();
-            foreach ($ternaryConfig as $func => $argNums) {
-                foreach ($argNums as $argNum) {
-                    for ($i = 0; $i <= 1000; $i++) {
-                        $oldCode = $code;
-                        $code = $this->rewriteArguments($code, 'ternary', $func, $argNum);
-                        if ($code == $oldCode) {
-                            break;
-                        }
-                        if ($i == 1000) {
-                            echo "Reached 1000 iterations, something probably went wrong, exiting\n";
-                            exit;
-                        }
+        $ternaryConfig = $this->getFuncCallTernaryConfig();
+        foreach ($ternaryConfig as $func => $argNums) {
+            if (strpos($code, $func) === false) {
+                continue;
+            }
+            foreach ($argNums as $argNum) {
+                for ($i = 0; $i <= 1000; $i++) {
+                    $oldCode = $code;
+                    $code = $this->rewriteArguments($code, 'ternary', $func, $argNum);
+                    if ($code == $oldCode) {
+                        break;
                     }
-                    // file_put_contents(BASE_PATH . '/out.php', $code);
+                    if ($i == 1000) {
+                        echo "Reached 1000 iterations, something probably went wrong, exiting\n";
+                        exit;
+                    }
                 }
+                // file_put_contents(BASE_PATH . '/out.php', $code);
             }
         }
         $code = $this->addMethodAttributes($code);
