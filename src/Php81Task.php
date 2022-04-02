@@ -23,7 +23,7 @@ class Php81Task extends BuildTask
 
     public function run($request)
     {
-        $useSampleCode = false; // sboyd
+        $useSampleCode = true; // sboyd
         if ($useSampleCode) {
             $code = $this->getSampleCode();
             $code = $this->rewriteCode($code);
@@ -82,21 +82,23 @@ class Php81Task extends BuildTask
         file_put_contents(BASE_PATH . '/out.php', $code);
         // only rewrite a single ternary func+argNum at a time.  Reason for this is that
         // nested, multiline funcCall's that include ternarys because impossible to manage
-        $ternaryConfig = $this->getFuncCallTernaryConfig();
-        foreach ($ternaryConfig as $func => $argNums) {
-            foreach ($argNums as $argNum) {
-                for ($i = 0; $i <= 1000; $i++) {
-                    $oldCode = $code;
-                    $code = $this->rewriteArguments($code, 'ternary', $func, $argNum);
-                    if ($code == $oldCode) {
-                        break;
+        if (false) { // TODO speed up - to strpos() for all the fns in file first to see if even bother get ast
+            $ternaryConfig = $this->getFuncCallTernaryConfig();
+            foreach ($ternaryConfig as $func => $argNums) {
+                foreach ($argNums as $argNum) {
+                    for ($i = 0; $i <= 1000; $i++) {
+                        $oldCode = $code;
+                        $code = $this->rewriteArguments($code, 'ternary', $func, $argNum);
+                        if ($code == $oldCode) {
+                            break;
+                        }
+                        if ($i == 1000) {
+                            echo "Reached 1000 iterations, something probably went wrong, exiting\n";
+                            exit;
+                        }
                     }
-                    if ($i == 1000) {
-                        echo "Reached 1000 iterations, something probably went wrong, exiting\n";
-                        exit;
-                    }
+                    // file_put_contents(BASE_PATH . '/out.php', $code);
                 }
-                file_put_contents(BASE_PATH . '/out.php', $code);
             }
         }
         $code = $this->addMethodAttributes($code);
@@ -260,22 +262,7 @@ class Php81Task extends BuildTask
     private function getFuncCallTernaryConfig()
     {
         $ret = [];
-        // '_' => [
-        //     'return' => [
-        //         'singleType' => true,
-        //         'type' => 'string',
-        //     ],
-        //     'params' => [
-        //         [
-        //             'rewrite' => true,
-        //             'whatType' => 'cast-string',
-        //             'name' => 'message',
-        //             'type' => 'string',
-        //         ],
-        //     ],
-        // ],
         foreach (Php81Consts::FUNC_CALL_CONFIG as $func => $arr) {
-            // $params = array_reverse($arr['params']);
             foreach ($arr['params'] as $paramNum => $param) {
                 if (strpos($param['whatType'], 'ternary') !== false) {
                     $ret[$func] ??= [];
@@ -346,6 +333,15 @@ class Php81Task extends BuildTask
                                 }
                             }
                         }
+                        if ($value instanceof FuncCall) {
+                            $innerFunc = $value->name->parts[0];
+                            $innerFuncCallConfig = Php81Consts::FUNC_CALL_CONFIG[$innerFunc] ?? [];
+                            if (!empty($innerFuncCallConfig)) {
+                                if ($innerFuncCallConfig['return']['singleType']) {
+                                    continue;
+                                }
+                            };
+                        }
                         /** @var Expr $expr */
                         $expr = $arg->value;
                         if ($what == 'cast') {
@@ -357,9 +353,10 @@ class Php81Task extends BuildTask
                         } elseif ($what == 'ternary') {
                             $a = [
                                 'string' => "''",
+                                'bool' => 'false',
                                 'int' => '0',
                                 'float' => '0.0',
-                                'array' => '[]'
+                                'array' => '[]',
                             ];
                             $v = $a[$type];
                             $code = implode('', [
