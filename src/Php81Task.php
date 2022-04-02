@@ -76,6 +76,7 @@ class Php81Task extends BuildTask
         'strstr' => [1 => 'cast', 2 => 'cast'],
         'strtok' => [1 => 'cast', 2 => 'cast'],
         'strtolower' => [1 => 'cast'],
+        'strtotime' => [1 => 'cast'],
         'strtoupper' => [1 => 'cast'],
         'strtr' => [1 => 'cast', 2 => 'cast', 3 => 'cast'],
         'substr' => [1 => 'cast'],
@@ -106,15 +107,33 @@ class Php81Task extends BuildTask
         'rawurlencode' => [1 => 'cast'],
         'urldecode' => [1 => 'cast'],
         'urlencode' => [1 => 'cast'],
+        // network functions
+        // https://www.php.net/manual/en/function.setcookie.php
+        'setcookie' => [1 => 'cast', 2 => 'cast', 3 => 'cast-int', 4 => 'cast', 5 => 'cast', 6 => 'cast-bool', 7 => 'cast-bool'],
     ];
 
     private function getSampleCode(): string
     {
-        return str_replace(['<<<CLASS', 'CLASS;'], '', file_get_contents(__DIR__ . '/MyClass.php'));
+        return str_replace(["<<<'CLASS'", 'CLASS;'], '', file_get_contents(__DIR__ . '/MyClass.php'));
+    }
+
+    private function test()
+    {
+        $refl = new ReflectionFunction('strtoupper');
+        $doc = $refl->getDocComment();
+        $returnType = $refl->getReturnType();
+        $params = $refl->getParameters();
+        foreach ($params as $param) {
+            $paramType = $param->getType();
+            $a=1;
+        }
+        $a=1;
+        die;
     }
 
     public function run($request)
     {
+        $this->test(); // <<<
         $useSampleCode = false; // sboyd
         if ($useSampleCode) {
             $code = $this->getSampleCode();
@@ -192,7 +211,22 @@ class Php81Task extends BuildTask
             }
         }
         $code = $this->addMethodAttributes($code);
+        $code = $this->rewriteGetHierarchyBaseClass($code);
         return $code;
+    }
+
+    // rewrite Hierarchy::getHierarchyBaseClass()
+    private function rewriteGetHierarchyBaseClass(string $code): string
+    {
+        $find = 'while ($ancestorClass && !Extensible::has_extension($ancestorClass, self::class)) {';
+        $replace = <<<'EOT'
+        while (
+                    $ancestorClass &&
+                    method_exists($ancestorClass, 'has_extension') &&
+                    !call_user_func("$ancestorClass::has_extension", $ancestorClass, self::class)
+                ) {
+        EOT;
+        return str_replace($find, $replace, $code);
     }
 
     private function getAst(string $code): array

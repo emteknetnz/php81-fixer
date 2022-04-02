@@ -1,6 +1,6 @@
 <?php
 // wrapping in heredoc so that php interpreter doesn't see it as a regular class
-<<<CLASS
+<<<'CLASS'
 class MyClass implements Iterator
 {
     /**
@@ -88,6 +88,13 @@ class MyClass implements Iterator
         str_replace(' ', '', ucwords($a)) . ucwords(str_replace(' ', '', $b));
 
         $this->url = preg_replace(['/\/+/','/^\//', '/\/$/'], ['/','',''], $this->url);
+        
+        return (substr($response->getBody(), 0, 5) == '<' . '?xml');
+    }
+
+    public function InFuture()
+    {
+        return strtotime($this->value) > DBDatetime::now()->getTimestamp();
     }
 }
 CLASS;
