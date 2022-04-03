@@ -29,7 +29,7 @@ class Php81Task extends BuildTask
         $useSampleCode = false; // sboyd
         if ($useSampleCode) {
             $code = $this->getSampleCode();
-            $code = $this->rewriteCode($code);
+            $code = $this->rewriteCode($code, '');
             echo $code;
             echo "\n";
         } else {
@@ -68,7 +68,7 @@ class Php81Task extends BuildTask
                 continue;
             }
             $originalCode = file_get_contents($path);
-            $newCode = $this->rewriteCode($originalCode);
+            $newCode = $this->rewriteCode($originalCode, $path);
             if ($originalCode != $newCode) {
                 file_put_contents($path, $newCode);
                 echo "Updated code in $path\n";
@@ -78,13 +78,14 @@ class Php81Task extends BuildTask
         }
     }
 
-    private function rewriteCode(string $code): string
+    private function rewriteCode(string $code, string $path): string
     {
         // only rewrite a single func+argNum at a time.  Reason for this is that
         // nested, funcCalls have too many edge cases to manage impossible to manage
         $config = $this->getSimpleFuncCallConfig();
         foreach (array_keys($config) as $type) {
             foreach ($config[$type] as $func => $argNums) {
+                continue;
                 if (strpos($code, $func) === false) {
                     continue;
                 }
@@ -110,22 +111,26 @@ class Php81Task extends BuildTask
             }
         }
         $code = $this->addMethodAttributes($code);
-        $code = $this->rewriteGetHierarchyBaseClass($code);
+        $code = $this->rewriteSpecificFiles($code, $path);
         return $code;
     }
 
     // rewrite Hierarchy::getHierarchyBaseClass()
-    private function rewriteGetHierarchyBaseClass(string $code): string
+    private function rewriteSpecificFiles(string $code, string $path): string
     {
-        $find = 'while ($ancestorClass && !Extensible::has_extension($ancestorClass, self::class)) {';
-        $replace = <<<'EOT'
-        while (
-                    $ancestorClass &&
-                    method_exists($ancestorClass, 'has_extension') &&
-                    !call_user_func("$ancestorClass::has_extension", $ancestorClass, self::class)
-                ) {
-        EOT;
-        return str_replace($find, $replace, $code);
+        if (strpos($path, 'framework/src/ORM/Hierarchy/Hierarchy.php') !== false) {
+            $find = 'while ($ancestorClass && !Extensible::has_extension($ancestorClass, self::class)) {';
+            $replace = <<<'EOT'
+            while (
+                        $ancestorClass &&
+                        method_exists($ancestorClass, 'has_extension') &&
+                        !call_user_func("$ancestorClass::has_extension", $ancestorClass, self::class)
+                    ) {
+            EOT;
+            $code = str_replace($find, $replace, $code);
+        }
+        
+        return $code;
     }
 
     private function getAst(string $code): array
