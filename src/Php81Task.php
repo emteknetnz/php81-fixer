@@ -38,6 +38,9 @@ class Php81Task extends BuildTask
                 BASE_PATH . '/vendor/silverstripe',
                 BASE_PATH . '/vendor/symbiote',
                 BASE_PATH . '/vendor/bringyourownideas',
+                BASE_PATH . '/vendor/colymba',
+                BASE_PATH . '/vendor/cwp',
+                BASE_PATH . '/vendor/tractorcow',
             ];
             foreach ($vendorDirs as $vendorDir) {
                 if (!file_exists($vendorDir)) {
@@ -80,23 +83,19 @@ class Php81Task extends BuildTask
 
     private function rewriteCode(string $code, string $path): string
     {
+        $code = $this->rewriteSpecificFiles($code, $path);
         // only rewrite a single func+argNum at a time.  Reason for this is that
         // nested, funcCalls have too many edge cases to manage impossible to manage
         $config = $this->getSimpleFuncCallConfig();
         foreach (array_keys($config) as $type) {
             foreach ($config[$type] as $func => $argNums) {
-                continue;
                 if (strpos($code, $func) === false) {
                     continue;
                 }
                 foreach ($argNums as $argNum) {
                     for ($i = 0; $i <= 1000; $i++) {
                         $oldCode = $code;
-                        if ($type == 'cast') {
-                            $code = $this->rewriteArguments($code, 'cast', $func, $argNum);
-                        } else {
-                            $code = $this->rewriteArguments($code, 'ternary', $func, $argNum);
-                        }
+                        $code = $this->rewriteArguments($code, $type, $func, $argNum);
                         // output to temp file in case it gets mangled, makes diagnosing much easier
                         file_put_contents(BASE_PATH . '/out.php', $code);
                         if ($code == $oldCode) {
@@ -111,25 +110,6 @@ class Php81Task extends BuildTask
             }
         }
         $code = $this->addMethodAttributes($code);
-        $code = $this->rewriteSpecificFiles($code, $path);
-        return $code;
-    }
-
-    // rewrite Hierarchy::getHierarchyBaseClass()
-    private function rewriteSpecificFiles(string $code, string $path): string
-    {
-        if (strpos($path, 'framework/src/ORM/Hierarchy/Hierarchy.php') !== false) {
-            $find = 'while ($ancestorClass && !Extensible::has_extension($ancestorClass, self::class)) {';
-            $replace = <<<'EOT'
-            while (
-                        $ancestorClass &&
-                        method_exists($ancestorClass, 'has_extension') &&
-                        !call_user_func("$ancestorClass::has_extension", $ancestorClass, self::class)
-                    ) {
-            EOT;
-            $code = str_replace($find, $replace, $code);
-        }
-        
         return $code;
     }
 
@@ -381,6 +361,184 @@ class Php81Task extends BuildTask
                 }
             }
         }
+        return $code;
+    }
+
+    private function rewriteSpecificFiles(string $code, string $path): string
+    {
+        if (strpos($path, 'framework/src/ORM/Hierarchy/Hierarchy.php') !== false) {
+            $find = 'while ($ancestorClass && !Extensible::has_extension($ancestorClass, self::class)) {';
+            $replace = <<<'EOT'
+            while (
+                        $ancestorClass &&
+                        method_exists($ancestorClass, 'has_extension') &&
+                        !call_user_func("$ancestorClass::has_extension", $ancestorClass, self::class)
+                    ) {
+            EOT;
+            $code = str_replace($find, $replace, $code);
+        }
+
+        if (strpos($path, 'mfa/src/Store/SessionStore.php') !== false) {
+            $find = <<<'EOT'
+            public function serialize(): string
+            {
+                // Use the stored member ID by default. We should do this because we can avoid ever fetching the member object
+                // from the database if the member was never accessed during this request.
+                $memberID = $this->memberID;
+
+                if (!$memberID && ($member = $this->getMember())) {
+                    $memberID = $this->getMember()->ID;
+                }
+
+                $stuff = json_encode([
+                    'member' => $memberID,
+                    'method' => $this->getMethod(),
+                    'state' => $this->getState(),
+                    'verifiedMethods' => $this->getVerifiedMethods(),
+                ]);
+
+                if (!$stuff) {
+                    throw new RuntimeException(json_last_error_msg());
+                }
+
+                return $stuff;
+            }
+
+            public function unserialize($serialized): void
+            {
+                $state = json_decode($serialized, true);
+
+                if (is_array($state) && $state['member']) {
+                    $this->memberID = $state['member'];
+                    $this->setMethod($state['method']);
+                    $this->setState($state['state']);
+
+                    foreach ($state['verifiedMethods'] as $method) {
+                        $this->addVerifiedMethod($method);
+                    }
+                }
+            }
+            EOT;
+            $replace = <<<'EOT'
+            public function __serialize(): array
+            {
+                // Use the stored member ID by default.
+                // We should do this because we can avoid ever fetching the member object
+                // from the database if the member was never accessed during this request.
+                $memberID = $this->memberID;
+
+                if (!$memberID && ($member = $this->getMember())) {
+                    $memberID = $this->getMember()->ID;
+                }
+
+                return [
+                    'member' => $memberID,
+                    'method' => $this->getMethod(),
+                    'state' => $this->getState(),
+                    'verifiedMethods' => $this->getVerifiedMethods(),
+                ];
+            }
+
+            public function __unserialize(array $data): void
+            {
+                $this->memberID = $data['member'];
+                $this->setMethod($data['method']);
+                $this->setState($data['state']);
+                foreach ($data['verifiedMethods'] as $method) {
+                    $this->addVerifiedMethod($method);
+                }
+            }
+
+            /**
+             * The __serialize() magic method will be automatically used instead of this
+             *
+             * @return string
+             * @deprecated will be removed in 5.0
+             */
+            public function serialize(): string
+            {
+                $data = $this->__serialize();
+                $str = json_encode($data);
+                if (!$str) {
+                    throw new RuntimeException(json_last_error_msg());
+                }
+                return $str;
+            }
+        
+            /**
+             * The __unserialize() magic method will be automatically used instead of this almost all the time
+             * This method will be automatically used if existing serialized data was not saved as an associative array
+             * and the PHP version used in less than PHP 9.0
+             *
+             * @param string $serialized
+             * @deprecated will be removed in 5.0
+             */
+            public function unserialize($serialized): void
+            {
+                $data = json_decode($serialized, true);
+                $this->__unserialize($data);
+            }
+            EOT;
+            $code = str_replace($find, $replace, $code);
+        }
+
+        if (strpos($path, 'webauthn-authenticator/src/CredentialRepository.php') !== false) {
+            $find = <<<'EOT'
+            public function serialize()
+            {
+                return json_encode(['credentials' => $this->toArray(), 'memberID' => $this->memberID]);
+            }
+
+            public function unserialize($serialized)
+            {
+                $raw = json_decode($serialized, true);
+
+                $this->memberID = $raw['memberID'];
+                $this->setCredentials($raw['credentials']);
+            }
+            EOT;
+            $replace = <<<'EOT'
+            public function __serialize(): array
+            {
+                return [
+                    'memberID' => $this->memberID,
+                    'credentials' => $this->toArray()
+                ];
+            }
+
+            public function __unserialize(array $data): void
+            {
+                $this->memberID = $data['memberID'];
+                $this->setCredentials($data['credentials']);
+            }
+
+            /**
+             * The __serialize() magic method will be automatically used instead of this
+             *
+             * @return string
+             * @deprecated will be removed in 5.0
+             */
+            public function serialize()
+            {
+                return json_encode($this->__serialize());
+            }
+
+            /**
+             * The __unserialize() magic method will be automatically used instead of this almost all the time
+             * This method will be automatically used if existing serialized data was not saved as an associative array
+             * and the PHP version used in less than PHP 9.0
+             *
+             * @param string $serialized
+             * @deprecated will be removed in 5.0
+             */
+            public function unserialize($serialized)
+            {
+                $this->__unserialize(json_decode($serialized, true));
+            }
+            EOT;
+            $code = str_replace($find, $replace, $code);
+        }
+
         return $code;
     }
 }

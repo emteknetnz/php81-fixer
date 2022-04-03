@@ -24,6 +24,14 @@ class Php81Consts
             'offsetset',
             'offsetunset',
         ],
+        'SessionHandlerInterface' => [
+            'close',
+            'destroy',
+            'gc',
+            'open',
+            'read',
+            'write',
+        ],
     ];
 
     // private const FUNC_CALL_CONFIG = [
