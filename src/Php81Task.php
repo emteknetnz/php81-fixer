@@ -70,6 +70,11 @@ class Php81Task extends BuildTask
             if (is_dir($path)) {
                 continue;
             }
+
+            if (!preg_match('#(SessionStore.php|CredentialRepository.php)#', $path)) {
+                continue;
+            }
+
             $originalCode = file_get_contents($path);
             $newCode = $this->rewriteCode($originalCode, $path);
             if ($originalCode != $newCode) {
@@ -381,103 +386,103 @@ class Php81Task extends BuildTask
         if (strpos($path, 'mfa/src/Store/SessionStore.php') !== false) {
             $find = <<<'EOT'
             public function serialize(): string
-            {
-                // Use the stored member ID by default. We should do this because we can avoid ever fetching the member object
-                // from the database if the member was never accessed during this request.
-                $memberID = $this->memberID;
+                {
+                    // Use the stored member ID by default. We should do this because we can avoid ever fetching the member object
+                    // from the database if the member was never accessed during this request.
+                    $memberID = $this->memberID;
 
-                if (!$memberID && ($member = $this->getMember())) {
-                    $memberID = $this->getMember()->ID;
+                    if (!$memberID && ($member = $this->getMember())) {
+                        $memberID = $this->getMember()->ID;
+                    }
+
+                    $stuff = json_encode([
+                        'member' => $memberID,
+                        'method' => $this->getMethod(),
+                        'state' => $this->getState(),
+                        'verifiedMethods' => $this->getVerifiedMethods(),
+                    ]);
+
+                    if (!$stuff) {
+                        throw new RuntimeException(json_last_error_msg());
+                    }
+
+                    return $stuff;
                 }
 
-                $stuff = json_encode([
-                    'member' => $memberID,
-                    'method' => $this->getMethod(),
-                    'state' => $this->getState(),
-                    'verifiedMethods' => $this->getVerifiedMethods(),
-                ]);
+                public function unserialize($serialized): void
+                {
+                    $state = json_decode($serialized, true);
 
-                if (!$stuff) {
-                    throw new RuntimeException(json_last_error_msg());
-                }
+                    if (is_array($state) && $state['member']) {
+                        $this->memberID = $state['member'];
+                        $this->setMethod($state['method']);
+                        $this->setState($state['state']);
 
-                return $stuff;
-            }
-
-            public function unserialize($serialized): void
-            {
-                $state = json_decode($serialized, true);
-
-                if (is_array($state) && $state['member']) {
-                    $this->memberID = $state['member'];
-                    $this->setMethod($state['method']);
-                    $this->setState($state['state']);
-
-                    foreach ($state['verifiedMethods'] as $method) {
-                        $this->addVerifiedMethod($method);
+                        foreach ($state['verifiedMethods'] as $method) {
+                            $this->addVerifiedMethod($method);
+                        }
                     }
                 }
-            }
             EOT;
             $replace = <<<'EOT'
             public function __serialize(): array
-            {
-                // Use the stored member ID by default.
-                // We should do this because we can avoid ever fetching the member object
-                // from the database if the member was never accessed during this request.
-                $memberID = $this->memberID;
+                {
+                    // Use the stored member ID by default.
+                    // We should do this because we can avoid ever fetching the member object
+                    // from the database if the member was never accessed during this request.
+                    $memberID = $this->memberID;
 
-                if (!$memberID && ($member = $this->getMember())) {
-                    $memberID = $this->getMember()->ID;
+                    if (!$memberID && ($member = $this->getMember())) {
+                        $memberID = $this->getMember()->ID;
+                    }
+
+                    return [
+                        'member' => $memberID,
+                        'method' => $this->getMethod(),
+                        'state' => $this->getState(),
+                        'verifiedMethods' => $this->getVerifiedMethods(),
+                    ];
                 }
 
-                return [
-                    'member' => $memberID,
-                    'method' => $this->getMethod(),
-                    'state' => $this->getState(),
-                    'verifiedMethods' => $this->getVerifiedMethods(),
-                ];
-            }
-
-            public function __unserialize(array $data): void
-            {
-                $this->memberID = $data['member'];
-                $this->setMethod($data['method']);
-                $this->setState($data['state']);
-                foreach ($data['verifiedMethods'] as $method) {
-                    $this->addVerifiedMethod($method);
+                public function __unserialize(array $data): void
+                {
+                    $this->memberID = $data['member'];
+                    $this->setMethod($data['method']);
+                    $this->setState($data['state']);
+                    foreach ($data['verifiedMethods'] as $method) {
+                        $this->addVerifiedMethod($method);
+                    }
                 }
-            }
 
-            /**
-             * The __serialize() magic method will be automatically used instead of this
-             *
-             * @return string
-             * @deprecated will be removed in 5.0
-             */
-            public function serialize(): string
-            {
-                $data = $this->__serialize();
-                $str = json_encode($data);
-                if (!$str) {
-                    throw new RuntimeException(json_last_error_msg());
+                /**
+                 * The __serialize() magic method will be automatically used instead of this
+                 *
+                 * @return string
+                 * @deprecated will be removed in 5.0
+                 */
+                public function serialize(): string
+                {
+                    $data = $this->__serialize();
+                    $str = json_encode($data);
+                    if (!$str) {
+                        throw new RuntimeException(json_last_error_msg());
+                    }
+                    return $str;
                 }
-                return $str;
-            }
-        
-            /**
-             * The __unserialize() magic method will be automatically used instead of this almost all the time
-             * This method will be automatically used if existing serialized data was not saved as an associative array
-             * and the PHP version used in less than PHP 9.0
-             *
-             * @param string $serialized
-             * @deprecated will be removed in 5.0
-             */
-            public function unserialize($serialized): void
-            {
-                $data = json_decode($serialized, true);
-                $this->__unserialize($data);
-            }
+            
+                /**
+                 * The __unserialize() magic method will be automatically used instead of this almost all the time
+                 * This method will be automatically used if existing serialized data was not saved as an associative array
+                 * and the PHP version used in less than PHP 9.0
+                 *
+                 * @param string $serialized
+                 * @deprecated will be removed in 5.0
+                 */
+                public function unserialize($serialized): void
+                {
+                    $data = json_decode($serialized, true);
+                    $this->__unserialize($data);
+                }
             EOT;
             $code = str_replace($find, $replace, $code);
         }
@@ -485,56 +490,56 @@ class Php81Task extends BuildTask
         if (strpos($path, 'webauthn-authenticator/src/CredentialRepository.php') !== false) {
             $find = <<<'EOT'
             public function serialize()
-            {
-                return json_encode(['credentials' => $this->toArray(), 'memberID' => $this->memberID]);
-            }
+                {
+                    return json_encode(['credentials' => $this->toArray(), 'memberID' => $this->memberID]);
+                }
 
-            public function unserialize($serialized)
-            {
-                $raw = json_decode($serialized, true);
+                public function unserialize($serialized)
+                {
+                    $raw = json_decode($serialized, true);
 
-                $this->memberID = $raw['memberID'];
-                $this->setCredentials($raw['credentials']);
-            }
+                    $this->memberID = $raw['memberID'];
+                    $this->setCredentials($raw['credentials']);
+                }
             EOT;
             $replace = <<<'EOT'
             public function __serialize(): array
-            {
-                return [
-                    'memberID' => $this->memberID,
-                    'credentials' => $this->toArray()
-                ];
-            }
+                {
+                    return [
+                        'memberID' => $this->memberID,
+                        'credentials' => $this->toArray()
+                    ];
+                }
 
-            public function __unserialize(array $data): void
-            {
-                $this->memberID = $data['memberID'];
-                $this->setCredentials($data['credentials']);
-            }
+                public function __unserialize(array $data): void
+                {
+                    $this->memberID = $data['memberID'];
+                    $this->setCredentials($data['credentials']);
+                }
 
-            /**
-             * The __serialize() magic method will be automatically used instead of this
-             *
-             * @return string
-             * @deprecated will be removed in 5.0
-             */
-            public function serialize()
-            {
-                return json_encode($this->__serialize());
-            }
+                /**
+                 * The __serialize() magic method will be automatically used instead of this
+                 *
+                 * @return string
+                 * @deprecated will be removed in 5.0
+                 */
+                public function serialize()
+                {
+                    return json_encode($this->__serialize());
+                }
 
-            /**
-             * The __unserialize() magic method will be automatically used instead of this almost all the time
-             * This method will be automatically used if existing serialized data was not saved as an associative array
-             * and the PHP version used in less than PHP 9.0
-             *
-             * @param string $serialized
-             * @deprecated will be removed in 5.0
-             */
-            public function unserialize($serialized)
-            {
-                $this->__unserialize(json_decode($serialized, true));
-            }
+                /**
+                 * The __unserialize() magic method will be automatically used instead of this almost all the time
+                 * This method will be automatically used if existing serialized data was not saved as an associative array
+                 * and the PHP version used in less than PHP 9.0
+                 *
+                 * @param string $serialized
+                 * @deprecated will be removed in 5.0
+                 */
+                public function unserialize($serialized)
+                {
+                    $this->__unserialize(json_decode($serialized, true));
+                }
             EOT;
             $code = str_replace($find, $replace, $code);
         }
