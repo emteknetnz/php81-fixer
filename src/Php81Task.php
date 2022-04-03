@@ -70,11 +70,6 @@ class Php81Task extends BuildTask
             if (is_dir($path)) {
                 continue;
             }
-
-            if (!preg_match('#(SessionStore.php|CredentialRepository.php)#', $path)) {
-                continue;
-            }
-
             $originalCode = file_get_contents($path);
             $newCode = $this->rewriteCode($originalCode, $path);
             if ($originalCode != $newCode) {
