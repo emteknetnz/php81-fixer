@@ -333,7 +333,7 @@ class Php81Task extends BuildTask
                             };
                         }
                         if (!($value instanceof StaticCall)) {
-                            if ($value->name->name == 'class') {
+                            if ($value->name->name ?? '' == 'class') {
                                 // e.g. SiteTree::class
                                 continue;
                             }
