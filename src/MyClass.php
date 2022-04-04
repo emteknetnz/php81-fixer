@@ -119,9 +119,11 @@ class MyClass implements Iterator
         //     return (substr($response->getBody(), 0, 5) == '<' . '?xml');
         // }
 
-        // strtoupper(GLOBAL_CONSTANT);
-        // strtoupper(SomeClass::CONSTANT);
+        strtoupper(SomeClass::CONSTANT);
+        strtoupper(SiteTree::staticprop);
         strtoupper(SiteTree::class);
+        strtoupper(E_USER_WARNING); // defined const
+        strtoupper(MY_CONST); // undefined cost
     }
 }
 CLASS;

@@ -332,8 +332,13 @@ class Php81Task extends BuildTask
                                 }
                             };
                         }
+                        if ($value instanceof ConstFetch) {
+                            if (defined($value->name->parts[0] ?? '')) {
+                                continue;
+                            }
+                        }
                         if (!($value instanceof StaticCall)) {
-                            if ($value->name->name ?? '' == 'class') {
+                            if (($value->name->name ?? '') == 'class') {
                                 // e.g. SiteTree::class
                                 continue;
                             }
