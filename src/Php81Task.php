@@ -84,6 +84,7 @@ class Php81Task extends BuildTask
     private function rewriteCode(string $code, string $path): string
     {
         $code = $this->rewriteSpecificFiles($code, $path);
+        return $code; //<<<
         // only rewrite a single func+argNum at a time.  Reason for this is that
         // nested, funcCalls have too many edge cases to manage impossible to manage
         $config = $this->getSimpleFuncCallConfig();
@@ -545,6 +546,101 @@ class Php81Task extends BuildTask
                 public function unserialize($serialized)
                 {
                     $this->__unserialize(json_decode($serialized, true));
+                }
+            EOT;
+            $code = str_replace($find, $replace, $code);
+        }
+
+
+        if (strpos($path, 'silverstripe-queuedjobs/src/Jobs/DoormanQueuedJobTask.php') !== false) {
+            $find = <<<'EOT'
+            /**
+                 * @inheritdoc
+                 *
+                 * @return string
+                 */
+                public function serialize()
+                {
+                    return serialize(array(
+                        'descriptor' => $this->descriptor->ID,
+                    ));
+                }
+
+                /**
+                 * @inheritdoc
+                 *
+                 * @throws InvalidArgumentException
+                 * @param string
+                 */
+                public function unserialize($serialized)
+                {
+                    $data = unserialize($serialized);
+
+                    if (!isset($data['descriptor'])) {
+                        throw new InvalidArgumentException('Malformed data');
+                    }
+
+                    $descriptor = QueuedJobDescriptor::get()
+                        ->filter('ID', $data['descriptor'])
+                        ->first();
+
+                    if (!$descriptor) {
+                        throw new InvalidArgumentException('Descriptor not found');
+                    }
+
+                    $this->descriptor = $descriptor;
+                }
+            EOT;
+            $replace = <<<'EOT'
+            public function __serialize(): array
+                {
+                    return [
+                        'descriptor' => $this->descriptor->ID,
+                    ];
+                }
+
+                public function __unserialize(array $data): void
+                {
+                    if (!isset($data['descriptor'])) {
+                        throw new InvalidArgumentException('Malformed data');
+                    }
+                    $descriptor = QueuedJobDescriptor::get()
+                        ->filter('ID', $data['descriptor'])
+                        ->first();
+                    if (!$descriptor) {
+                        throw new InvalidArgumentException('Descriptor not found');
+                    }
+                    $this->descriptor = $descriptor;
+                }
+
+                /**
+                 * The __serialize() magic method will be automatically used instead of this
+                 *
+                 * @inheritdoc
+                 *
+                 * @return string
+                 * @deprecated will be removed in 5.0
+                 */
+                public function serialize()
+                {
+                    return serialize($this->__serialize);
+                }
+
+                /**
+                 * The __unserialize() magic method will be automatically used instead of this almost all the time
+                 * This method will be automatically used if existing serialized data was not saved as an associative array
+                 * and the PHP version used in less than PHP 9.0
+                 *
+                 * @inheritdoc
+                 *
+                 * @throws InvalidArgumentException
+                 * @param string
+                 * @deprecated will be removed in 5.0
+                 */
+                public function unserialize($serialized)
+                {
+                    $data = unserialize($serialized);
+                    $this->__unserialize($data);
                 }
             EOT;
             $code = str_replace($find, $replace, $code);
