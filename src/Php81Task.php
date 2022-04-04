@@ -84,7 +84,6 @@ class Php81Task extends BuildTask
     private function rewriteCode(string $code, string $path): string
     {
         $code = $this->rewriteSpecificFiles($code, $path);
-        return $code; //<<<
         // only rewrite a single func+argNum at a time.  Reason for this is that
         // nested, funcCalls have too many edge cases to manage impossible to manage
         $config = $this->getSimpleFuncCallConfig();
