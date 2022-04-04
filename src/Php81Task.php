@@ -645,6 +645,18 @@ class Php81Task extends BuildTask
             $code = str_replace($find, $replace, $code);
         }
 
+        if (strpos($path, 'framework/src/ORM/Queries/SQLConditionalExpression.php') !== false) {
+            $find = '$halfway = count($array ?: []) / 2;';
+            $replace = '$halfway = floor(count($array ?: []) / 2);';
+            $code = str_replace($find, $replace, $code);
+        }
+
+        if (strpos($path, 'framework/src/Control/HTTP.php') !== false) {
+            $find = 'http_build_query($params, null, $separator)';
+            $replace = 'http_build_query($params, \'\', $separator)';
+            $code = str_replace($find, $replace, $code);
+        }
+
         return $code;
     }
 }
