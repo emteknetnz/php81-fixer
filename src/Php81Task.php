@@ -71,11 +71,11 @@ class Php81Task extends BuildTask
             if (is_dir($path)) {
                 continue;
             }
-
-            if (!preg_match('#SapphireTest.php#', $path)) {
-                continue;
+            // <<
+            if (!preg_match('#Folder.php#', $path)) {
+                // continue;
             }
-
+            // <<
             $originalCode = file_get_contents($path);
             $newCode = $this->rewriteCode($originalCode, $path);
             if ($originalCode != $newCode) {
@@ -394,6 +394,13 @@ class Php81Task extends BuildTask
 
     private function rewriteSpecificFiles(string $code, string $path): string
     {
+        if (strpos($path, 'assets/src/Folder.php') !== false) {
+            // doesn't automatically find this because parent func_call is variadic
+            $find = 'Convert::raw2att(preg_replace(\'~\R~u\', \' \', $this->Title))';
+            $replace = 'Convert::raw2att(preg_replace(\'~\R~u\', \' \', $this->Title ?: \'\'))';
+            $code = str_replace($find, $replace, $code);
+        }
+
         if (strpos($path, 'mfa/src/Store/SessionStore.php') !== false) {
             $find = <<<'EOT'
             public function serialize(): string
