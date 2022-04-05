@@ -14,6 +14,7 @@ use PhpParser\Node\Expr\Variable;
 use PhpParser\ParserFactory;
 use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\ClassMethod;
+use PhpParser\Node\Stmt\If_;
 use PhpParser\Node\Stmt\Namespace_;
 use SilverStripe\Dev\BuildTask;
 
@@ -70,6 +71,11 @@ class Php81Task extends BuildTask
             if (is_dir($path)) {
                 continue;
             }
+
+            if (!preg_match('#SapphireTest.php#', $path)) {
+                continue;
+            }
+
             $originalCode = file_get_contents($path);
             $newCode = $this->rewriteCode($originalCode, $path);
             if ($originalCode != $newCode) {
@@ -143,8 +149,19 @@ class Php81Task extends BuildTask
 
     private function getClasses(array $ast): array
     {
+        $ret = [];
         $a = ($ast[0] ?? null) instanceof Namespace_ ? $ast[0]->stmts : $ast;
-        return array_filter($a, fn($v) => $v instanceof Class_);
+        $ret = array_merge($ret, array_filter($a, fn($v) => $v instanceof Class_));
+        // SapphireTest and other file with dual classes
+        $i = array_filter($a, fn($v) => $v instanceof If_);
+        foreach ($i as $if) {
+            foreach ($if->stmts ?? [] as $v) {
+                if ($v instanceof Class_) {
+                    $ret[] = $v;
+                }
+            }
+        }
+        return $ret;
     }
 
     private function getMethods(Class_ $class): array
