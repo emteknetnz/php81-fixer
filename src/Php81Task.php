@@ -394,18 +394,6 @@ class Php81Task extends BuildTask
 
     private function rewriteSpecificFiles(string $code, string $path): string
     {
-        if (strpos($path, 'framework/src/ORM/Hierarchy/Hierarchy.php') !== false) {
-            $find = 'while ($ancestorClass && !Extensible::has_extension($ancestorClass, self::class)) {';
-            $replace = <<<'EOT'
-            while (
-                        $ancestorClass &&
-                        method_exists($ancestorClass, 'has_extension') &&
-                        !call_user_func("$ancestorClass::has_extension", $ancestorClass, self::class)
-                    ) {
-            EOT;
-            $code = str_replace($find, $replace, $code);
-        }
-
         if (strpos($path, 'mfa/src/Store/SessionStore.php') !== false) {
             $find = <<<'EOT'
             public function serialize(): string
