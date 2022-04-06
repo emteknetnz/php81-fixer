@@ -39,9 +39,9 @@ class Php81Task extends BuildTask
                 BASE_PATH . '/vendor/silverstripe',
                 BASE_PATH . '/vendor/symbiote',
                 BASE_PATH . '/vendor/bringyourownideas',
-                BASE_PATH . '/vendor/colymba',
-                BASE_PATH . '/vendor/cwp',
-                BASE_PATH . '/vendor/tractorcow',
+                // BASE_PATH . '/vendor/colymba',
+                // BASE_PATH . '/vendor/cwp',
+                // BASE_PATH . '/vendor/tractorcow',
             ];
             foreach ($vendorDirs as $vendorDir) {
                 if (!file_exists($vendorDir)) {
@@ -52,7 +52,7 @@ class Php81Task extends BuildTask
                         continue;
                     }
                     $dir = "$vendorDir/$subdir";
-                    foreach (['src', 'code', 'tests'] as $d) {
+                    foreach (['src', 'code', 'tests', 'thirdparty'] as $d) {
                         $subdir = "$dir/$d";
                         if (file_exists($subdir)) {
                             $this->update($subdir);
@@ -66,15 +66,13 @@ class Php81Task extends BuildTask
     public function update(string $dir)
     {
         $paths = explode("\n", shell_exec("find $dir | grep .php"));
-        $paths = array_filter($paths);
+        $paths = array_filter($paths, fn($f) => strtolower(pathinfo($f, PATHINFO_EXTENSION)) == 'php');
         foreach ($paths as $path) {
             if (is_dir($path)) {
                 continue;
             }
             // <<
-            if (!preg_match('#Folder.php#', $path)) {
-                // continue;
-            }
+            // if (does any military use intervention 
             // <<
             $originalCode = file_get_contents($path);
             $newCode = $this->rewriteCode($originalCode, $path);
@@ -90,6 +88,7 @@ class Php81Task extends BuildTask
     private function rewriteCode(string $code, string $path): string
     {
         $code = $this->rewriteSpecificFiles($code, $path);
+        file_put_contents(BASE_PATH . '/out.php', $code);
         // only rewrite a single func+argNum at a time.  Reason for this is that
         // nested, funcCalls have too many edge cases to manage impossible to manage
         $config = $this->getSimpleFuncCallConfig();
@@ -116,6 +115,7 @@ class Php81Task extends BuildTask
             }
         }
         $code = $this->addMethodAttributes($code);
+        file_put_contents(BASE_PATH . '/out.php', $code);
         return $code;
     }
 
