@@ -360,6 +360,8 @@ class Php81Task extends BuildTask
                                 continue;
                             }
                         }
+                        // hardcode to only use null coalescing operator
+                        $what = 'ternary';
                         /** @var Expr $expr */
                         $expr = $arg->value;
                         if ($what == 'cast') {
