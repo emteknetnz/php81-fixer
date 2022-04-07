@@ -370,6 +370,12 @@ class Php81Task extends BuildTask
                             ]);
                             return $code;
                         } elseif ($what == 'ternary') {
+                            // despite it being called 'ternary', it's actually the null coalescing operator
+                            // $a = null; $a ?? 'abc' becomes 'abc'
+                            // $a = false; $a ?? 'abc' becomes false
+                            // Needed for passing something like 0 (int) into preg_replace 3rd param
+                            // which is string|array. 0 ?: '' will turn into '', causing a regression,
+                            // 0 ?? '' will throw a deprecation warning, which we need to manually fix
                             $a = [
                                 'string' => "''",
                                 'bool' => 'false',
@@ -380,7 +386,7 @@ class Php81Task extends BuildTask
                             $v = $a[$type];
                             $code = implode('', [
                                 substr($code, 0, $expr->getEndFilePos() + 1),
-                                " ?: $v",
+                                " ?? $v",
                                 substr($code, $expr->getEndFilePos() + 1),
                             ]);
                             return $code;
@@ -394,6 +400,12 @@ class Php81Task extends BuildTask
 
     private function rewriteSpecificFiles(string $code, string $path): string
     {
+        if (strpos($path, 'framework/src/ORM/FieldType/DBText.php') !== false) {
+            $find = '$position = max(0, $position - ($characters / 2));';
+            $replace = '$position = floor(max(0, $position - $characters / 2));';
+            $code = str_replace($find, $replace, $code);
+        }
+
         if (strpos($path, 'assets/src/Folder.php') !== false) {
             // doesn't automatically find this because parent func_call is variadic
             $find = 'Convert::raw2att(preg_replace(\'~\R~u\', \' \', $this->Title))';
