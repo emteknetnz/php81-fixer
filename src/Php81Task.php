@@ -402,12 +402,6 @@ class Php81Task extends BuildTask
 
     private function rewriteSpecificFiles(string $code, string $path): string
     {
-        if (strpos($path, 'framework/src/ORM/FieldType/DBText.php') !== false) {
-            $find = '$position = max(0, $position - ($characters / 2));';
-            $replace = '$position = floor(max(0, $position - $characters / 2));';
-            $code = str_replace($find, $replace, $code);
-        }
-
         if (strpos($path, 'assets/src/Folder.php') !== false) {
             // doesn't automatically find this because parent func_call is variadic
             $find = 'Convert::raw2att(preg_replace(\'~\R~u\', \' \', $this->Title))';
@@ -415,273 +409,280 @@ class Php81Task extends BuildTask
             $code = str_replace($find, $replace, $code);
         }
 
-        if (strpos($path, 'mfa/src/Store/SessionStore.php') !== false) {
-            $find = <<<'EOT'
-            public function serialize(): string
-                {
-                    // Use the stored member ID by default. We should do this because we can avoid ever fetching the member object
-                    // from the database if the member was never accessed during this request.
-                    $memberID = $this->memberID;
+        // if (strpos($path, 'framework/src/ORM/FieldType/DBText.php') !== false) {
+        //     $find = '$position = max(0, $position - ($characters / 2));';
+        //     $replace = '$position = floor(max(0, $position - $characters / 2));';
+        //     $code = str_replace($find, $replace, $code);
+        // }
 
-                    if (!$memberID && ($member = $this->getMember())) {
-                        $memberID = $this->getMember()->ID;
-                    }
+        // if (strpos($path, 'mfa/src/Store/SessionStore.php') !== false) {
+        //     $find = <<<'EOT'
+        //     public function serialize(): string
+        //         {
+        //             // Use the stored member ID by default. We should do this because we can avoid ever fetching the member object
+        //             // from the database if the member was never accessed during this request.
+        //             $memberID = $this->memberID;
 
-                    $stuff = json_encode([
-                        'member' => $memberID,
-                        'method' => $this->getMethod(),
-                        'state' => $this->getState(),
-                        'verifiedMethods' => $this->getVerifiedMethods(),
-                    ]);
+        //             if (!$memberID && ($member = $this->getMember())) {
+        //                 $memberID = $this->getMember()->ID;
+        //             }
 
-                    if (!$stuff) {
-                        throw new RuntimeException(json_last_error_msg());
-                    }
+        //             $stuff = json_encode([
+        //                 'member' => $memberID,
+        //                 'method' => $this->getMethod(),
+        //                 'state' => $this->getState(),
+        //                 'verifiedMethods' => $this->getVerifiedMethods(),
+        //             ]);
 
-                    return $stuff;
-                }
+        //             if (!$stuff) {
+        //                 throw new RuntimeException(json_last_error_msg());
+        //             }
 
-                public function unserialize($serialized): void
-                {
-                    $state = json_decode($serialized, true);
+        //             return $stuff;
+        //         }
 
-                    if (is_array($state) && $state['member']) {
-                        $this->memberID = $state['member'];
-                        $this->setMethod($state['method']);
-                        $this->setState($state['state']);
+        //         public function unserialize($serialized): void
+        //         {
+        //             $state = json_decode($serialized, true);
 
-                        foreach ($state['verifiedMethods'] as $method) {
-                            $this->addVerifiedMethod($method);
-                        }
-                    }
-                }
-            EOT;
-            $replace = <<<'EOT'
-            public function __serialize(): array
-                {
-                    // Use the stored member ID by default.
-                    // We should do this because we can avoid ever fetching the member object
-                    // from the database if the member was never accessed during this request.
-                    $memberID = $this->memberID;
+        //             if (is_array($state) && $state['member']) {
+        //                 $this->memberID = $state['member'];
+        //                 $this->setMethod($state['method']);
+        //                 $this->setState($state['state']);
 
-                    if (!$memberID && ($member = $this->getMember())) {
-                        $memberID = $this->getMember()->ID;
-                    }
+        //                 foreach ($state['verifiedMethods'] as $method) {
+        //                     $this->addVerifiedMethod($method);
+        //                 }
+        //             }
+        //         }
+        //     EOT;
+        //     $replace = <<<'EOT'
+        //     public function __serialize(): array
+        //         {
+        //             // Use the stored member ID by default.
+        //             // We should do this because we can avoid ever fetching the member object
+        //             // from the database if the member was never accessed during this request.
+        //             $memberID = $this->memberID;
 
-                    return [
-                        'member' => $memberID,
-                        'method' => $this->getMethod(),
-                        'state' => $this->getState(),
-                        'verifiedMethods' => $this->getVerifiedMethods(),
-                    ];
-                }
+        //             if (!$memberID && ($member = $this->getMember())) {
+        //                 $memberID = $this->getMember()->ID;
+        //             }
 
-                public function __unserialize(array $data): void
-                {
-                    $this->memberID = $data['member'];
-                    $this->setMethod($data['method']);
-                    $this->setState($data['state']);
-                    foreach ($data['verifiedMethods'] as $method) {
-                        $this->addVerifiedMethod($method);
-                    }
-                }
+        //             return [
+        //                 'member' => $memberID,
+        //                 'method' => $this->getMethod(),
+        //                 'state' => $this->getState(),
+        //                 'verifiedMethods' => $this->getVerifiedMethods(),
+        //             ];
+        //         }
 
-                /**
-                 * The __serialize() magic method will be automatically used instead of this
-                 *
-                 * @return string
-                 * @deprecated will be removed in 5.0
-                 */
-                public function serialize(): string
-                {
-                    $data = $this->__serialize();
-                    $str = json_encode($data);
-                    if (!$str) {
-                        throw new RuntimeException(json_last_error_msg());
-                    }
-                    return $str;
-                }
+        //         public function __unserialize(array $data): void
+        //         {
+        //             $this->memberID = $data['member'];
+        //             $this->setMethod($data['method']);
+        //             $this->setState($data['state']);
+        //             foreach ($data['verifiedMethods'] as $method) {
+        //                 $this->addVerifiedMethod($method);
+        //             }
+        //         }
+
+        //         /**
+        //          * The __serialize() magic method will be automatically used instead of this
+        //          *
+        //          * @return string
+        //          * @deprecated will be removed in 5.0
+        //          */
+        //         public function serialize(): string
+        //         {
+        //             $data = $this->__serialize();
+        //             $str = json_encode($data);
+        //             if (!$str) {
+        //                 throw new RuntimeException(json_last_error_msg());
+        //             }
+        //             return $str;
+        //         }
             
-                /**
-                 * The __unserialize() magic method will be automatically used instead of this almost all the time
-                 * This method will be automatically used if existing serialized data was not saved as an associative array
-                 * and the PHP version used in less than PHP 9.0
-                 *
-                 * @param string $serialized
-                 * @deprecated will be removed in 5.0
-                 */
-                public function unserialize($serialized): void
-                {
-                    $data = json_decode($serialized, true);
-                    $this->__unserialize($data);
-                }
-            EOT;
-            $code = str_replace($find, $replace, $code);
-        }
+        //         /**
+        //          * The __unserialize() magic method will be automatically used instead of this almost all the time
+        //          * This method will be automatically used if existing serialized data was not saved as an associative array
+        //          * and the PHP version used in less than PHP 9.0
+        //          *
+        //          * @param string $serialized
+        //          * @deprecated will be removed in 5.0
+        //          */
+        //         public function unserialize($serialized): void
+        //         {
+        //             $data = json_decode($serialized, true);
+        //             $this->__unserialize($data);
+        //         }
+        //     EOT;
+        //     $code = str_replace($find, $replace, $code);
+        // }
 
-        if (strpos($path, 'webauthn-authenticator/src/CredentialRepository.php') !== false) {
-            $find = <<<'EOT'
-            public function serialize()
-                {
-                    return json_encode(['credentials' => $this->toArray(), 'memberID' => $this->memberID]);
-                }
+        // if (strpos($path, 'webauthn-authenticator/src/CredentialRepository.php') !== false) {
+        //     $find = <<<'EOT'
+        //     public function serialize()
+        //         {
+        //             return json_encode(['credentials' => $this->toArray(), 'memberID' => $this->memberID]);
+        //         }
 
-                public function unserialize($serialized)
-                {
-                    $raw = json_decode($serialized, true);
+        //         public function unserialize($serialized)
+        //         {
+        //             $raw = json_decode($serialized, true);
 
-                    $this->memberID = $raw['memberID'];
-                    $this->setCredentials($raw['credentials']);
-                }
-            EOT;
-            $replace = <<<'EOT'
-            public function __serialize(): array
-                {
-                    return [
-                        'memberID' => $this->memberID,
-                        'credentials' => $this->toArray()
-                    ];
-                }
+        //             $this->memberID = $raw['memberID'];
+        //             $this->setCredentials($raw['credentials']);
+        //         }
+        //     EOT;
+        //     $replace = <<<'EOT'
+        //     public function __serialize(): array
+        //         {
+        //             return [
+        //                 'memberID' => $this->memberID,
+        //                 'credentials' => $this->toArray()
+        //             ];
+        //         }
 
-                public function __unserialize(array $data): void
-                {
-                    $this->memberID = $data['memberID'];
-                    $this->setCredentials($data['credentials']);
-                }
+        //         public function __unserialize(array $data): void
+        //         {
+        //             $this->memberID = $data['memberID'];
+        //             $this->setCredentials($data['credentials']);
+        //         }
 
-                /**
-                 * The __serialize() magic method will be automatically used instead of this
-                 *
-                 * @return string
-                 * @deprecated will be removed in 5.0
-                 */
-                public function serialize()
-                {
-                    return json_encode($this->__serialize());
-                }
+        //         /**
+        //          * The __serialize() magic method will be automatically used instead of this
+        //          *
+        //          * @return string
+        //          * @deprecated will be removed in 5.0
+        //          */
+        //         public function serialize()
+        //         {
+        //             return json_encode($this->__serialize());
+        //         }
 
-                /**
-                 * The __unserialize() magic method will be automatically used instead of this almost all the time
-                 * This method will be automatically used if existing serialized data was not saved as an associative array
-                 * and the PHP version used in less than PHP 9.0
-                 *
-                 * @param string $serialized
-                 * @deprecated will be removed in 5.0
-                 */
-                public function unserialize($serialized)
-                {
-                    $this->__unserialize(json_decode($serialized, true));
-                }
-            EOT;
-            $code = str_replace($find, $replace, $code);
-        }
+        //         /**
+        //          * The __unserialize() magic method will be automatically used instead of this almost all the time
+        //          * This method will be automatically used if existing serialized data was not saved as an associative array
+        //          * and the PHP version used in less than PHP 9.0
+        //          *
+        //          * @param string $serialized
+        //          * @deprecated will be removed in 5.0
+        //          */
+        //         public function unserialize($serialized)
+        //         {
+        //             $this->__unserialize(json_decode($serialized, true));
+        //         }
+        //     EOT;
+        //     $code = str_replace($find, $replace, $code);
+        // }
 
 
-        if (strpos($path, 'silverstripe-queuedjobs/src/Jobs/DoormanQueuedJobTask.php') !== false) {
-            $find = <<<'EOT'
-            /**
-                 * @inheritdoc
-                 *
-                 * @return string
-                 */
-                public function serialize()
-                {
-                    return serialize(array(
-                        'descriptor' => $this->descriptor->ID,
-                    ));
-                }
+        // if (strpos($path, 'silverstripe-queuedjobs/src/Jobs/DoormanQueuedJobTask.php') !== false) {
+        //     $find = <<<'EOT'
+        //     /**
+        //          * @inheritdoc
+        //          *
+        //          * @return string
+        //          */
+        //         public function serialize()
+        //         {
+        //             return serialize(array(
+        //                 'descriptor' => $this->descriptor->ID,
+        //             ));
+        //         }
 
-                /**
-                 * @inheritdoc
-                 *
-                 * @throws InvalidArgumentException
-                 * @param string
-                 */
-                public function unserialize($serialized)
-                {
-                    $data = unserialize($serialized);
+        //         /**
+        //          * @inheritdoc
+        //          *
+        //          * @throws InvalidArgumentException
+        //          * @param string
+        //          */
+        //         public function unserialize($serialized)
+        //         {
+        //             $data = unserialize($serialized);
 
-                    if (!isset($data['descriptor'])) {
-                        throw new InvalidArgumentException('Malformed data');
-                    }
+        //             if (!isset($data['descriptor'])) {
+        //                 throw new InvalidArgumentException('Malformed data');
+        //             }
 
-                    $descriptor = QueuedJobDescriptor::get()
-                        ->filter('ID', $data['descriptor'])
-                        ->first();
+        //             $descriptor = QueuedJobDescriptor::get()
+        //                 ->filter('ID', $data['descriptor'])
+        //                 ->first();
 
-                    if (!$descriptor) {
-                        throw new InvalidArgumentException('Descriptor not found');
-                    }
+        //             if (!$descriptor) {
+        //                 throw new InvalidArgumentException('Descriptor not found');
+        //             }
 
-                    $this->descriptor = $descriptor;
-                }
-            EOT;
-            $replace = <<<'EOT'
-            public function __serialize(): array
-                {
-                    return [
-                        'descriptor' => $this->descriptor->ID,
-                    ];
-                }
+        //             $this->descriptor = $descriptor;
+        //         }
+        //     EOT;
+        //     $replace = <<<'EOT'
+        //     public function __serialize(): array
+        //         {
+        //             return [
+        //                 'descriptor' => $this->descriptor->ID,
+        //             ];
+        //         }
 
-                public function __unserialize(array $data): void
-                {
-                    if (!isset($data['descriptor'])) {
-                        throw new InvalidArgumentException('Malformed data');
-                    }
-                    $descriptor = QueuedJobDescriptor::get()
-                        ->filter('ID', $data['descriptor'])
-                        ->first();
-                    if (!$descriptor) {
-                        throw new InvalidArgumentException('Descriptor not found');
-                    }
-                    $this->descriptor = $descriptor;
-                }
+        //         public function __unserialize(array $data): void
+        //         {
+        //             if (!isset($data['descriptor'])) {
+        //                 throw new InvalidArgumentException('Malformed data');
+        //             }
+        //             $descriptor = QueuedJobDescriptor::get()
+        //                 ->filter('ID', $data['descriptor'])
+        //                 ->first();
+        //             if (!$descriptor) {
+        //                 throw new InvalidArgumentException('Descriptor not found');
+        //             }
+        //             $this->descriptor = $descriptor;
+        //         }
 
-                /**
-                 * The __serialize() magic method will be automatically used instead of this
-                 *
-                 * @inheritdoc
-                 *
-                 * @return string
-                 * @deprecated will be removed in 5.0
-                 */
-                public function serialize()
-                {
-                    return serialize($this->__serialize);
-                }
+        //         /**
+        //          * The __serialize() magic method will be automatically used instead of this
+        //          *
+        //          * @inheritdoc
+        //          *
+        //          * @return string
+        //          * @deprecated will be removed in 5.0
+        //          */
+        //         public function serialize()
+        //         {
+        //             return serialize($this->__serialize);
+        //         }
 
-                /**
-                 * The __unserialize() magic method will be automatically used instead of this almost all the time
-                 * This method will be automatically used if existing serialized data was not saved as an associative array
-                 * and the PHP version used in less than PHP 9.0
-                 *
-                 * @inheritdoc
-                 *
-                 * @throws InvalidArgumentException
-                 * @param string
-                 * @deprecated will be removed in 5.0
-                 */
-                public function unserialize($serialized)
-                {
-                    $data = unserialize($serialized);
-                    $this->__unserialize($data);
-                }
-            EOT;
-            $code = str_replace($find, $replace, $code);
-        }
+        //         /**
+        //          * The __unserialize() magic method will be automatically used instead of this almost all the time
+        //          * This method will be automatically used if existing serialized data was not saved as an associative array
+        //          * and the PHP version used in less than PHP 9.0
+        //          *
+        //          * @inheritdoc
+        //          *
+        //          * @throws InvalidArgumentException
+        //          * @param string
+        //          * @deprecated will be removed in 5.0
+        //          */
+        //         public function unserialize($serialized)
+        //         {
+        //             $data = unserialize($serialized);
+        //             $this->__unserialize($data);
+        //         }
+        //     EOT;
+        //     $code = str_replace($find, $replace, $code);
+        // }
 
-        if (strpos($path, 'framework/src/ORM/Queries/SQLConditionalExpression.php') !== false) {
-            $find = '$halfway = count($array ?: []) / 2;';
-            $replace = '$halfway = floor(count($array ?: []) / 2);';
-            $code = str_replace($find, $replace, $code);
-        }
+        // if (strpos($path, 'framework/src/ORM/Queries/SQLConditionalExpression.php') !== false) {
+        //     $find = '$halfway = count($array ?: []) / 2;';
+        //     $replace = '$halfway = floor(count($array ?: []) / 2);';
+        //     $code = str_replace($find, $replace, $code);
+        // }
 
-        if (strpos($path, 'framework/src/Control/HTTP.php') !== false) {
-            $find = 'http_build_query($params, null, $separator)';
-            $replace = 'http_build_query($params, \'\', $separator)';
-            $code = str_replace($find, $replace, $code);
-        }
+        // already been merged
+        // if (strpos($path, 'framework/src/Control/HTTP.php') !== false) {
+        //     $find = 'http_build_query($params, null, $separator)';
+        //     $replace = 'http_build_query($params, \'\', $separator)';
+        //     $code = str_replace($find, $replace, $code);
+        // }
 
         return $code;
     }
