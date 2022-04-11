@@ -4,6 +4,7 @@ use PhpParser\Error;
 use PhpParser\Lexer;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr;
+use PhpParser\Node\Expr\ArrayDimFetch;
 use PhpParser\Node\Expr\ClassConstFetch;
 use PhpParser\Node\Expr\ConstFetch;
 use PhpParser\Node\Expr\FuncCall;
@@ -180,7 +181,7 @@ class Php81Task extends BuildTask
                 }
             }
             if (is_object($thing)) {
-                foreach (['expr', 'stmts', 'cond', 'else', 'elseifs', 'left', 'right', 'value'] as $property) {
+                foreach (['expr', 'stmts', 'cond', 'else', 'elseifs', 'left', 'right', 'value', 'args', 'items'] as $property) {
                     if (property_exists($thing, $property) && !is_null($thing->{$property})) {
                         if (is_array($thing->{$property})) {
                             foreach ($thing->{$property} as $thang) {
@@ -326,13 +327,15 @@ class Php81Task extends BuildTask
                         $arg = $funcCall->args[$argNum] ?? null;
                         $value = $arg->value ?? null;
                         if (!($value instanceof Variable)) {
-                            if (!($value instanceof PropertyFetch)) {
-                                if (!($value instanceof MethodCall)) {
-                                    if (!($value instanceof FuncCall)) {
-                                        if (!($value instanceof StaticCall)) {
-                                            if (!($value instanceof ConstFetch)) {
-                                                if (!($value instanceof ClassConstFetch)) {
-                                                    continue;
+                            if (!($value instanceof ArrayDimFetch)) {
+                                if (!($value instanceof PropertyFetch)) {
+                                    if (!($value instanceof MethodCall)) {
+                                        if (!($value instanceof FuncCall)) {
+                                            if (!($value instanceof StaticCall)) {
+                                                if (!($value instanceof ConstFetch)) {
+                                                    if (!($value instanceof ClassConstFetch)) {
+                                                        continue;
+                                                    }
                                                 }
                                             }
                                         }
@@ -402,12 +405,12 @@ class Php81Task extends BuildTask
 
     private function rewriteSpecificFiles(string $code, string $path): string
     {
-        if (strpos($path, 'assets/src/Folder.php') !== false) {
-            // doesn't automatically find this because parent func_call is variadic
-            $find = 'Convert::raw2att(preg_replace(\'~\R~u\', \' \', $this->Title))';
-            $replace = 'Convert::raw2att(preg_replace(\'~\R~u\', \' \', $this->Title ?: \'\'))';
-            $code = str_replace($find, $replace, $code);
-        }
+        // if (strpos($path, 'assets/src/Folder.php') !== false) {
+        //     // doesn't automatically find this because parent func_call is variadic
+        //     $find = 'Convert::raw2att(preg_replace(\'~\R~u\', \' \', $this->Title))';
+        //     $replace = 'Convert::raw2att(preg_replace(\'~\R~u\', \' \', $this->Title ?: \'\'))';
+        //     $code = str_replace($find, $replace, $code);
+        // }
 
         // if (strpos($path, 'framework/src/ORM/FieldType/DBText.php') !== false) {
         //     $find = '$position = max(0, $position - ($characters / 2));';
