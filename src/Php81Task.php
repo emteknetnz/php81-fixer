@@ -40,9 +40,9 @@ class Php81Task extends BuildTask
                 BASE_PATH . '/vendor/silverstripe',
                 BASE_PATH . '/vendor/symbiote',
                 BASE_PATH . '/vendor/bringyourownideas',
-                // BASE_PATH . '/vendor/colymba',
-                // BASE_PATH . '/vendor/cwp',
-                // BASE_PATH . '/vendor/tractorcow',
+                BASE_PATH . '/vendor/colymba',
+                BASE_PATH . '/vendor/cwp',
+                BASE_PATH . '/vendor/tractorcow',
             ];
             foreach ($vendorDirs as $vendorDir) {
                 if (!file_exists($vendorDir)) {
