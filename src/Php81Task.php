@@ -344,7 +344,7 @@ class Php81Task extends BuildTask
                             }
                         }
                         if ($value instanceof FuncCall) {
-                            $innerFunc = $value->name->parts[0];
+                            $innerFunc = $value->name->parts[0] ?? '';
                             $innerFuncCallConfig = Php81Consts::FUNC_CALL_CONFIG[$innerFunc] ?? [];
                             if (!empty($innerFuncCallConfig)) {
                                 if ($innerFuncCallConfig['return']['singleType']) {
