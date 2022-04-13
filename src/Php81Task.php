@@ -53,6 +53,12 @@ class Php81Task extends BuildTask
                         continue;
                     }
                     $dir = "$vendorDir/$subdir";
+                    //
+                    if ($dir != '/var/www/vendor/silverstripe/graphql') {
+                        // continue;
+                    }
+                    // var_dump($dir);
+                    //
                     foreach (['src', 'code', 'tests', 'thirdparty'] as $d) {
                         $subdir = "$dir/$d";
                         if (file_exists($subdir)) {
@@ -72,9 +78,6 @@ class Php81Task extends BuildTask
             if (is_dir($path)) {
                 continue;
             }
-            // <<
-            // if (does any military use intervention 
-            // <<
             $originalCode = file_get_contents($path);
             $newCode = $this->rewriteCode($originalCode, $path);
             if ($originalCode != $newCode) {
