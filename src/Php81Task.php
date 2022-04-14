@@ -28,7 +28,7 @@ class Php81Task extends BuildTask
 
     public function run($request)
     {
-        $useSampleCode = false; // sboyd
+        $useSampleCode = true; // sboyd
         if ($useSampleCode) {
             $code = $this->getSampleCode();
             $code = $this->rewriteCode($code, '');
@@ -54,8 +54,8 @@ class Php81Task extends BuildTask
                     }
                     $dir = "$vendorDir/$subdir";
                     //
-                    if ($dir != '/var/www/vendor/silverstripe/graphql') {
-                        // continue;
+                    if ($dir != '/var/www/vendor/silverstripe/html5') {
+                        continue;
                     }
                     // var_dump($dir);
                     //
@@ -184,7 +184,7 @@ class Php81Task extends BuildTask
                 }
             }
             if (is_object($thing)) {
-                foreach (['expr', 'stmts', 'cond', 'else', 'elseifs', 'left', 'right', 'value', 'args', 'items'] as $property) {
+                foreach (['expr', 'stmts', 'cond', 'else', 'elseifs', 'left', 'right', 'value', 'args', 'items', 'cases'] as $property) {
                     if (property_exists($thing, $property) && !is_null($thing->{$property})) {
                         if (is_array($thing->{$property})) {
                             foreach ($thing->{$property} as $thang) {

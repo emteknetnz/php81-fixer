@@ -133,13 +133,19 @@ class MyClass implements Iterator
 
     public static function getByEmail($email)
     {
-        return static::get()->filterAny([
-            'EmailHashed' => sha1($email),
-        ]);
-                return sprintf(
-            "<span class=\"jstree-foldericon\"></span><span class=\"item\">%s</span>",
-            Convert::raw2att(preg_replace('~\R~u', ' ', $this->Title))
-        );
+        switch($state) {
+            case 'data':
+                $char = strtoupper($myvar);
+                break;
+        }
+
+        // return static::get()->filterAny([
+        //     'EmailHashed' => sha1($email),
+        // ]);
+        //         return sprintf(
+        //     "<span class=\"jstree-foldericon\"></span><span class=\"item\">%s</span>",
+        //     Convert::raw2att(preg_replace('~\R~u', ' ', $this->Title))
+        // );
     }
 
 }
