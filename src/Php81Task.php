@@ -28,7 +28,7 @@ class Php81Task extends BuildTask
 
     public function run($request)
     {
-        $useSampleCode = true; // sboyd
+        $useSampleCode = false; // sboyd
         if ($useSampleCode) {
             $code = $this->getSampleCode();
             $code = $this->rewriteCode($code, '');
@@ -54,10 +54,10 @@ class Php81Task extends BuildTask
                     }
                     $dir = "$vendorDir/$subdir";
                     //
-                    if ($dir != '/var/www/vendor/silverstripe/html5') {
+                    if ($dir != '/var/www/vendor/silverstripe/admin') {
                         continue;
                     }
-                    // var_dump($dir);
+                    //var_dump($dir);
                     //
                     foreach (['src', 'code', 'tests', 'thirdparty'] as $d) {
                         $subdir = "$dir/$d";
