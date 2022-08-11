@@ -4,7 +4,8 @@
     "type": "silverstripe-vendormodule",
     "require": {
         "php": "^7.4 || ^8.0",
-        "silverstripe/framework": "^4"
+        "silverstripe/framework": "^4",
+        "nikic/php-parser": "^4"
     },
     "license": "MIT",
     "authors": [
