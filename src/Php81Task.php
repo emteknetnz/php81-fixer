@@ -138,7 +138,9 @@ class Php81Task extends BuildTask
         ]);
         $parser = (new ParserFactory)->create(ParserFactory::PREFER_PHP7, $lexer);
         try {
-            $ast = $parser->parse($code);
+            // note: the str_replace() is untested for the context of php81fixer
+            // I copied this in after using it on https://github.com/emteknetnz/silverstripe-deprecator/blob/main/src/DeprecationDiffTask.php
+            $ast = $parser->parse(str_replace('<?php declare(strict_types=1);', '<?php', $code));
         } catch (Error $error) {
             echo "Parse error: {$error->getMessage()}\n";
             die;
